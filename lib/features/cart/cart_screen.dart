@@ -260,7 +260,7 @@ class _CartScreenState extends State<CartScreen> {
       final order = await orderController.checkout(user: user, items: items);
       cart.clear();
 
-      if (!mounted) return;
+      if (!context.mounted) return;
       final navigator = Navigator.of(context);
       final router = GoRouter.of(context);
       final orderLabel = order.id.split('-').last;
