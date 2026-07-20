@@ -287,7 +287,7 @@ class _CartScreenState extends State<CartScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Đặt hàng thành công!',
+                  'Đã gửi đơn thành công!',
                   textAlign: TextAlign.center,
                   style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w900,
@@ -295,7 +295,8 @@ class _CartScreenState extends State<CartScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Đơn #$orderLabel đã được tạo.',
+                  'Đơn #$orderLabel đang ở trạng thái "Đã gửi đơn".\n'
+                  'Cửa hàng sẽ xác nhận khi nhận đơn — bạn có thể theo dõi trong mục Đơn.',
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppSpacing.lg),

@@ -67,6 +67,32 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
+      function orderOwnedByCaller() {
+        return resource.data.userEmail == request.auth.token.email;
+      }
+
+      function onlyStatusFieldsChanged() {
+        return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'updatedAt', 'statusHistory']);
+      }
+
+      // Customer may cancel early or confirm delivery when shipping.
+      function customerStatusUpdateOk() {
+        return isCustomer()
+          && orderOwnedByCaller()
+          && onlyStatusFieldsChanged()
+          && (
+            (
+              resource.data.status in ['placed', 'confirmed', 'pending']
+              && request.resource.data.status == 'cancelled'
+            )
+            || (
+              resource.data.status == 'shipping'
+              && request.resource.data.status == 'delivered'
+            )
+          );
+      }
+
       allow read: if signedIn()
         && (isStaff() || resource.data.userEmail == request.auth.token.email);
       allow create: if signedIn()
@@ -74,8 +100,10 @@ service cloud.firestore {
         && request.resource.data.userEmail == request.auth.token.email
         && request.resource.data.totalAmount > 0
         && request.resource.data.items is list
-        && request.resource.data.items.size() > 0;
-      allow update, delete: if isStaff();
+        && request.resource.data.items.size() > 0
+        && request.resource.data.status == 'placed';
+      allow update: if isStaff() || customerStatusUpdateOk();
+      allow delete: if isStaff();
     }
 
     match /seedRuns/{seedId} {

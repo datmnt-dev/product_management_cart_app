@@ -234,7 +234,10 @@ class StatisticsScreen extends StatelessWidget {
                 ...filteredOrders.map(
                   (o) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: OrderExpandableTile(order: o),
+                    child: OrderExpandableTile(
+                      order: o,
+                      showCustomerEmail: true,
+                    ),
                   ),
                 ),
             ],
