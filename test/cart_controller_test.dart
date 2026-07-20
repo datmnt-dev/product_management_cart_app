@@ -51,4 +51,46 @@ void main() {
     expect(controller.addProduct(draft), isFalse);
     expect(controller.isEmpty, isTrue);
   });
+
+  test('cart rejects out-of-stock active products', () {
+    final controller = CartController();
+    final oos = Product(
+      id: 'oos-1',
+      sku: 'SKU-OOS',
+      name: 'OOS item',
+      description: 'Empty stock',
+      category: ProductCategory.phone,
+      price: 50000,
+      stockQuantity: 0,
+      status: ProductStatus.active,
+      imageUrl: '',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+
+    expect(controller.addProduct(oos), isFalse);
+    expect(controller.isEmpty, isTrue);
+  });
+
+  test('cart clear empties all items', () {
+    final controller = CartController();
+    final product = Product(
+      id: 'p2',
+      sku: 'SKU-2',
+      name: 'Item',
+      description: 'x',
+      category: ProductCategory.other,
+      price: 10,
+      stockQuantity: 5,
+      status: ProductStatus.active,
+      imageUrl: '',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+    controller.addProduct(product);
+    controller.addProduct(product);
+    controller.clear();
+    expect(controller.isEmpty, isTrue);
+    expect(controller.totalQuantity, 0);
+  });
 }

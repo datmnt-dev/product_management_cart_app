@@ -212,38 +212,45 @@ class _AddToCartButton extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final enabled = product.canBePurchased;
 
-    return Tooltip(
-      message: enabled ? 'Thêm vào giỏ' : 'Không thể mua',
-      child: Material(
-        color: enabled
-            ? cs.primary.withValues(alpha: .1)
-            : cs.surfaceContainerHighest,
-        borderRadius: AppRadii.borderMd,
-        child: InkWell(
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: enabled
+          ? 'Thêm ${product.name} vào giỏ'
+          : '${product.name} không thể mua',
+      child: Tooltip(
+        message: enabled ? 'Thêm vào giỏ' : 'Không thể mua',
+        child: Material(
+          color: enabled
+              ? cs.primary.withValues(alpha: .1)
+              : cs.surfaceContainerHighest,
           borderRadius: AppRadii.borderMd,
-          onTap: enabled
-              ? () {
-                  final added =
-                      context.read<CartController>().addProduct(product);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        added
-                            ? 'Đã thêm ${product.name} vào giỏ.'
-                            : '${product.name} hiện không đủ hàng.',
+          child: InkWell(
+            borderRadius: AppRadii.borderMd,
+            onTap: enabled
+                ? () {
+                    final added =
+                        context.read<CartController>().addProduct(product);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          added
+                              ? 'Đã thêm ${product.name} vào giỏ.'
+                              : '${product.name} hiện không đủ hàng.',
+                        ),
+                        behavior: SnackBarBehavior.floating,
                       ),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              : null,
-          child: SizedBox(
-            width: 44,
-            height: 44,
-            child: Icon(
-              Icons.add_shopping_cart_rounded,
-              size: 18,
-              color: enabled ? cs.primary : cs.onSurfaceVariant,
+                    );
+                  }
+                : null,
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: Icon(
+                Icons.add_shopping_cart_rounded,
+                size: 18,
+                color: enabled ? cs.primary : cs.onSurfaceVariant,
+              ),
             ),
           ),
         ),

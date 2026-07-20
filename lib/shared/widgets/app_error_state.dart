@@ -25,52 +25,59 @@ class AppErrorState extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl,
-          vertical: AppSpacing.xxl,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 86,
-              height: 86,
-              decoration: BoxDecoration(
-                color: cs.errorContainer.withValues(alpha: .55),
-                borderRadius: AppRadii.borderXxl,
-              ),
-              child: Icon(icon, size: 38, color: cs.onErrorContainer),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 320),
-              child: Text(
-                message,
-                textAlign: TextAlign.center,
-                style: tt.bodyMedium?.copyWith(
-                  color: cs.onSurfaceVariant,
-                  height: 1.5,
-                  fontWeight: FontWeight.w500,
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      label: '$title. $message',
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.xl,
+            vertical: AppSpacing.xxl,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ExcludeSemantics(
+                child: Container(
+                  width: 86,
+                  height: 86,
+                  decoration: BoxDecoration(
+                    color: cs.errorContainer.withValues(alpha: .55),
+                    borderRadius: AppRadii.borderXxl,
+                  ),
+                  child: Icon(icon, size: 38, color: cs.onErrorContainer),
                 ),
               ),
-            ),
-            if (onRetry != null) ...[
               const SizedBox(height: AppSpacing.xl),
-              FilledButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh_rounded),
-                label: Text(retryLabel),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w900),
               ),
+              const SizedBox(height: AppSpacing.xs),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: tt.bodyMedium?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    height: 1.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              if (onRetry != null) ...[
+                const SizedBox(height: AppSpacing.xl),
+                FilledButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: Text(retryLabel),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
