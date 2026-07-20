@@ -1,0 +1,30 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:product_management_cart_app/data/models/product_model.dart';
+import 'package:product_management_cart_app/state/cart_controller.dart';
+
+void main() {
+  test('cart calculates quantity and total price', () {
+    final controller = CartController();
+    final product = Product(
+      id: 'p1',
+      name: 'Test product',
+      description: 'A product for cart testing.',
+      price: 120000,
+      imageUrl: '',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+
+    controller.addProduct(product);
+    controller.addProduct(product);
+
+    expect(controller.totalQuantity, 2);
+    expect(controller.totalPrice, 240000);
+
+    controller.decrement(product.id);
+    expect(controller.totalQuantity, 1);
+
+    controller.remove(product.id);
+    expect(controller.isEmpty, isTrue);
+  });
+}
