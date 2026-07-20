@@ -4,11 +4,14 @@ import 'package:provider/provider.dart';
 
 import '../../app/router.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/load_status.dart';
 import '../../data/models/product_model.dart';
 import '../../data/models/user_model.dart';
 import '../../data/models/user_role.dart';
+import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/product_image.dart';
+import '../../shared/widgets/skeleton.dart';
 import '../../state/auth_controller.dart';
 import '../../state/cart_controller.dart';
 import '../../state/product_controller.dart';
@@ -405,6 +408,21 @@ class _ProductGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<ProductController>(
       builder: (context, ctrl, _) {
+        // First load / empty cache
+        if (ctrl.status == LoadStatus.loading && ctrl.products.isEmpty) {
+          return const ProductGridSkeleton();
+        }
+
+        if (ctrl.hasError && ctrl.products.isEmpty) {
+          return AppErrorState(
+            title: 'Không tải được sản phẩm',
+            message:
+                ctrl.errorMessage ??
+                'Không thể tải sản phẩm. Kiểm tra kết nối mạng và thử lại.',
+            onRetry: ctrl.retry,
+          );
+        }
+
         final filteredList = ctrl.visibleProducts;
 
         if (filteredList.isEmpty) {

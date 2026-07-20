@@ -4,7 +4,10 @@ import 'package:provider/provider.dart';
 
 import '../../app/router.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/load_status.dart';
 import '../../data/models/product_model.dart';
+import '../../shared/widgets/app_error_state.dart';
+import '../../shared/widgets/app_loading_state.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/product_image.dart';
 import '../../state/auth_controller.dart';
@@ -17,16 +20,46 @@ class ProductDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<ProductController>(
-      builder: (context, ctrl, _) {
+    return Consumer2<ProductController, AuthController>(
+      builder: (context, ctrl, auth, _) {
         final product = ctrl.findById(productId);
-        if (product == null) {
+
+        // Wait for first stream snapshot when product not cached yet.
+        if (product == null &&
+            (ctrl.status == LoadStatus.loading ||
+                ctrl.status == LoadStatus.idle)) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Chi tiết sản phẩm')),
+            body: const AppLoadingState(message: 'Đang tải sản phẩm...'),
+          );
+        }
+
+        if (product == null && ctrl.hasError) {
+          return Scaffold(
+            appBar: AppBar(title: const Text('Chi tiết sản phẩm')),
+            body: AppErrorState(
+              title: 'Không tải được sản phẩm',
+              message:
+                  ctrl.errorMessage ??
+                  'Không thể tải sản phẩm. Kiểm tra kết nối mạng và thử lại.',
+              onRetry: ctrl.retry,
+            ),
+          );
+        }
+
+        // UX-only storefront guard: customers cannot open draft/archived
+        // even via deep link / history (Goal #5). Staff may open any status.
+        final unavailable =
+            product == null || !ctrl.isVisibleToCurrentUser(product);
+
+        if (unavailable) {
           return Scaffold(
             appBar: AppBar(title: const Text('Chi tiết sản phẩm')),
             body: EmptyState(
               icon: Icons.search_off,
               title: 'Không tìm thấy sản phẩm',
-              message: 'Sản phẩm có thể đã bị xóa khỏi hệ thống.',
+              message:
+                  'Sản phẩm không tồn tại hoặc không khả dụng trên cửa hàng.',
               action: FilledButton.icon(
                 onPressed: () => context.go(AppRoutes.products),
                 icon: const Icon(Icons.arrow_back),
@@ -35,6 +68,7 @@ class ProductDetailScreen extends StatelessWidget {
             ),
           );
         }
+
         return _SliverContent(product: product);
       },
     );
