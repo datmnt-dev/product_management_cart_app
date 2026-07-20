@@ -21,23 +21,35 @@ class CartController extends ChangeNotifier {
 
   bool get isEmpty => _items.isEmpty;
 
-  void addProduct(Product product) {
+  bool addProduct(Product product) {
+    if (!product.canBePurchased) {
+      return false;
+    }
+
     final current = _items[product.id];
     if (current == null) {
       _items[product.id] = CartItem(product: product, quantity: 1);
     } else {
+      if (current.quantity >= product.stockQuantity) {
+        return false;
+      }
       _items[product.id] = current.copyWith(quantity: current.quantity + 1);
     }
     notifyListeners();
+    return true;
   }
 
-  void increment(String productId) {
+  bool increment(String productId) {
     final item = _items[productId];
     if (item == null) {
-      return;
+      return false;
+    }
+    if (item.quantity >= item.product.stockQuantity) {
+      return false;
     }
     _items[productId] = item.copyWith(quantity: item.quantity + 1);
     notifyListeners();
+    return true;
   }
 
   void decrement(String productId) {

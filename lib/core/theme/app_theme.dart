@@ -15,16 +15,17 @@ class AppTheme {
   static const Color customerAccent = Color(0xFFE07A5F); // Terracotta
 
   static ThemeData light() {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: _primary,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: _primary,
-      secondary: _secondary,
-      tertiary: _tertiary,
-      surface: _surface,
-      error: const Color(0xFFEF4444),
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: _primary,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: _primary,
+          secondary: _secondary,
+          tertiary: _tertiary,
+          surface: _surface,
+          error: const Color(0xFFEF4444),
+        );
 
     final base = ThemeData(
       useMaterial3: true,
@@ -109,9 +110,7 @@ class AppTheme {
       // ─── FAB ───────────────────────────────────────────────────
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         elevation: 3,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
 
       // ─── Input fields ──────────────────────────────────────────
@@ -120,7 +119,9 @@ class AppTheme {
         fillColor: Colors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: scheme.outlineVariant.withValues(alpha: .4)),
+          borderSide: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: .4),
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -154,9 +155,7 @@ class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: Colors.white,
         elevation: 8,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         titleTextStyle: base.textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.w900,
           color: scheme.onSurface,
@@ -167,25 +166,19 @@ class AppTheme {
       // ─── SnackBar ──────────────────────────────────────────────
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 4,
       ),
 
       // ─── Chips ─────────────────────────────────────────────────
       chipTheme: base.chipTheme.copyWith(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
       ),
 
       // ─── ExpansionTile ─────────────────────────────────────────
       expansionTileTheme: ExpansionTileThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         collapsedShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -193,9 +186,7 @@ class AppTheme {
 
       // ─── Checkbox / ListTile ───────────────────────────────────
       checkboxTheme: CheckboxThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(5),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
       ),
       listTileTheme: const ListTileThemeData(
         visualDensity: VisualDensity.compact,
@@ -209,18 +200,14 @@ class AppTheme {
             base.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w800),
           ),
           shape: WidgetStatePropertyAll(
-            RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
       ),
 
       // ─── PopupMenu ─────────────────────────────────────────────
       popupMenuTheme: PopupMenuThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 4,
       ),
     );

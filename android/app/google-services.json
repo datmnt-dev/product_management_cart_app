@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1061459193207",
+    "project_id": "product-management-cart-bfacb",
+    "storage_bucket": "product-management-cart-bfacb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1061459193207:android:43b5a2c313834f45100572",
+        "android_client_info": {
+          "package_name": "com.product_management_cart_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0WcdmiaRFlm78iLbyRkdwLj6Nns1P7LU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,32 +1,46 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../data/models/product_model.dart';
-import '../data/services/local_database.dart';
+import '../data/services/firestore_database.dart';
+import 'auth_controller.dart';
 
 enum ProductSort { newest, priceAsc, priceDesc }
 
 class ProductController extends ChangeNotifier {
-  ProductController(this._database) {
-    _products = _database.getProducts();
+  ProductController(this._database, this._authController) {
+    _authController.addListener(_watchProductsForCurrentUser);
+    _watchProductsForCurrentUser();
   }
 
-  final LocalDatabase _database;
+  final FirestoreDatabase _database;
+  final AuthController _authController;
+  StreamSubscription<List<Product>>? _subscription;
 
   List<Product> _products = [];
   String _searchQuery = '';
   ProductSort _sort = ProductSort.newest;
+  ProductCategory? _category;
 
   List<Product> get products => List.unmodifiable(_products);
   String get searchQuery => _searchQuery;
   ProductSort get sort => _sort;
+  ProductCategory? get category => _category;
 
   List<Product> get visibleProducts {
     final query = _searchQuery.trim().toLowerCase();
     final items = _products.where((product) {
+      if (_category != null && product.category != _category) {
+        return false;
+      }
+
       if (query.isEmpty) {
         return true;
       }
-      return product.name.toLowerCase().contains(query);
+      return product.name.toLowerCase().contains(query) ||
+          product.description.toLowerCase().contains(query) ||
+          product.sku.toLowerCase().contains(query);
     }).toList();
 
     switch (_sort) {
@@ -60,40 +74,74 @@ class ProductController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setCategory(ProductCategory? category) {
+    _category = category;
+    notifyListeners();
+  }
+
   Future<Product> addProduct({
+    required String sku,
     required String name,
     required String description,
+    required ProductCategory category,
     required double price,
+    required int stockQuantity,
+    required ProductStatus status,
     required String imageUrl,
   }) async {
     final now = DateTime.now();
     final product = Product(
       id: 'product-${now.microsecondsSinceEpoch}',
+      sku: sku.trim().isEmpty ? _createSku(now) : sku.trim().toUpperCase(),
       name: name.trim(),
       description: description.trim(),
+      category: category,
       price: price,
+      stockQuantity: stockQuantity,
+      status: status,
       imageUrl: imageUrl.trim(),
       createdAt: now,
       updatedAt: now,
     );
 
     await _database.saveProduct(product);
-    _reload();
     return product;
   }
 
   Future<void> updateProduct(Product product) async {
     await _database.saveProduct(product.copyWith(updatedAt: DateTime.now()));
-    _reload();
   }
 
   Future<void> deleteProduct(String id) async {
     await _database.deleteProduct(id);
-    _reload();
   }
 
-  void _reload() {
-    _products = _database.getProducts();
-    notifyListeners();
+  Future<bool> reduceStock(Map<String, int> quantitiesByProductId) async {
+    return _database.reduceStock(quantitiesByProductId);
+  }
+
+  @override
+  void dispose() {
+    _authController.removeListener(_watchProductsForCurrentUser);
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  void _watchProductsForCurrentUser() {
+    _subscription?.cancel();
+    if (!_authController.isAuthenticated) {
+      _products = [];
+      notifyListeners();
+      return;
+    }
+
+    _subscription = _database.watchProducts().listen((products) {
+      _products = products;
+      notifyListeners();
+    });
+  }
+
+  static String _createSku(DateTime now) {
+    return 'SKU-${now.microsecondsSinceEpoch.toString().substring(8)}';
   }
 }

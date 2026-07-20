@@ -57,4 +57,17 @@ class Validators {
     }
     return null;
   }
+
+  static String? nonNegativeInt(String? value, String label) {
+    final required = requiredText(value, label);
+    if (required != null) {
+      return required;
+    }
+
+    final number = int.tryParse(value!.trim());
+    if (number == null || number < 0) {
+      return '$label phải là số nguyên từ 0 trở lên.';
+    }
+    return null;
+  }
 }

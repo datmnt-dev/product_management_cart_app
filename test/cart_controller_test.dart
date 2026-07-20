@@ -7,9 +7,13 @@ void main() {
     final controller = CartController();
     final product = Product(
       id: 'p1',
+      sku: 'SKU-TEST-001',
       name: 'Test product',
       description: 'A product for cart testing.',
+      category: ProductCategory.other,
       price: 120000,
+      stockQuantity: 3,
+      status: ProductStatus.active,
       imageUrl: '',
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
