@@ -10,6 +10,7 @@ import '../features/products/product_form_screen.dart';
 import '../features/products/product_list_screen.dart';
 import '../features/roles/role_matrix_screen.dart';
 import '../features/statistics/statistics_screen.dart';
+import '../shared/widgets/empty_state.dart';
 import '../state/auth_controller.dart';
 
 class AppRoutes {
@@ -132,13 +133,16 @@ GoRouter buildAppRouter(AuthController authController) {
     errorBuilder: (context, state) {
       return Scaffold(
         appBar: AppBar(title: const Text('Không tìm thấy')),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              'Màn hình này không tồn tại.',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+        body: EmptyState(
+          icon: Icons.travel_explore_outlined,
+          title: 'Màn hình không tồn tại',
+          message:
+              'Đường dẫn không hợp lệ hoặc đã bị di chuyển. '
+              'Quay lại cửa hàng để tiếp tục.',
+          action: FilledButton.icon(
+            onPressed: () => context.go(AppRoutes.products),
+            icon: const Icon(Icons.storefront_outlined),
+            label: const Text('Về cửa hàng'),
           ),
         ),
       );

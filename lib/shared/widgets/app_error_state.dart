@@ -3,20 +3,22 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
 
-/// Empty content placeholder. Name kept stable for existing imports.
-class EmptyState extends StatelessWidget {
-  const EmptyState({
-    required this.icon,
+/// Full-area error with optional retry (Firestore stream failures, etc.).
+class AppErrorState extends StatelessWidget {
+  const AppErrorState({
     required this.title,
     required this.message,
-    this.action,
+    this.icon = Icons.cloud_off_outlined,
+    this.onRetry,
+    this.retryLabel = 'Thử lại',
     super.key,
   });
 
   final IconData icon;
   final String title;
   final String message;
-  final Widget? action;
+  final VoidCallback? onRetry;
+  final String retryLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -36,37 +38,20 @@ class EmptyState extends StatelessWidget {
               width: 86,
               height: 86,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    cs.primaryContainer,
-                    cs.primaryContainer.withValues(alpha: .5),
-                  ],
-                ),
+                color: cs.errorContainer.withValues(alpha: .55),
                 borderRadius: AppRadii.borderXxl,
-                boxShadow: [
-                  BoxShadow(
-                    color: cs.primary.withValues(alpha: .08),
-                    blurRadius: 15,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
               ),
-              child: Icon(icon, size: 38, color: cs.onPrimaryContainer),
+              child: Icon(icon, size: 38, color: cs.onErrorContainer),
             ),
             const SizedBox(height: AppSpacing.xl),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: tt.titleLarge?.copyWith(
-                fontWeight: FontWeight.w900,
-                letterSpacing: -.3,
-              ),
+              style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: AppSpacing.xs),
             ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 300),
+              constraints: const BoxConstraints(maxWidth: 320),
               child: Text(
                 message,
                 textAlign: TextAlign.center,
@@ -77,9 +62,13 @@ class EmptyState extends StatelessWidget {
                 ),
               ),
             ),
-            if (action != null) ...[
-              const SizedBox(height: AppSpacing.xl + AppSpacing.xs),
-              action!,
+            if (onRetry != null) ...[
+              const SizedBox(height: AppSpacing.xl),
+              FilledButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh_rounded),
+                label: Text(retryLabel),
+              ),
             ],
           ],
         ),
