@@ -22,13 +22,6 @@ class OrderHistoryScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Lịch sử đơn hàng'),
-        actions: [
-          IconButton(
-            tooltip: 'Sản phẩm',
-            onPressed: () => context.go(AppRoutes.products),
-            icon: const Icon(Icons.storefront_outlined),
-          ),
-        ],
       ),
       body: Consumer<OrderController>(
         builder: (context, controller, _) {

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../app/router.dart';
 import '../../data/models/user_role.dart';
 import '../../state/auth_controller.dart';
 
@@ -18,13 +16,6 @@ class RoleMatrixScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Phân quyền truy cập'),
-        actions: [
-          IconButton(
-            tooltip: 'Sản phẩm',
-            onPressed: () => context.go(AppRoutes.products),
-            icon: const Icon(Icons.storefront_outlined),
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
