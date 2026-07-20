@@ -4,7 +4,10 @@ import 'package:provider/provider.dart';
 
 import '../../app/router.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/load_status.dart';
 import '../../data/models/order_model.dart';
+import '../../shared/widgets/app_error_state.dart';
+import '../../shared/widgets/app_loading_state.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../state/order_controller.dart';
 
@@ -29,6 +32,20 @@ class StatisticsScreen extends StatelessWidget {
       ),
       body: Consumer<OrderController>(
         builder: (context, orders, _) {
+          if (orders.status == LoadStatus.loading && orders.orders.isEmpty) {
+            return const AppLoadingState(message: 'Đang tải thống kê...');
+          }
+
+          if (orders.hasError && orders.orders.isEmpty) {
+            return AppErrorState(
+              title: 'Không tải được thống kê',
+              message:
+                  orders.errorMessage ??
+                  'Không thể tải đơn hàng. Kiểm tra kết nối mạng và thử lại.',
+              onRetry: orders.retry,
+            );
+          }
+
           if (orders.orders.isEmpty) {
             return EmptyState(
               icon: Icons.analytics_outlined,

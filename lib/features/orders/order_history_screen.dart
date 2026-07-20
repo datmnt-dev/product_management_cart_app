@@ -4,7 +4,10 @@ import 'package:provider/provider.dart';
 
 import '../../app/router.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/load_status.dart';
 import '../../data/models/order_model.dart';
+import '../../shared/widgets/app_error_state.dart';
+import '../../shared/widgets/app_loading_state.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../state/auth_controller.dart';
 import '../../state/order_controller.dart';
@@ -29,6 +32,21 @@ class OrderHistoryScreen extends StatelessWidget {
       ),
       body: Consumer<OrderController>(
         builder: (context, controller, _) {
+          if (controller.status == LoadStatus.loading &&
+              controller.orders.isEmpty) {
+            return const AppLoadingState(message: 'Đang tải đơn hàng...');
+          }
+
+          if (controller.hasError && controller.orders.isEmpty) {
+            return AppErrorState(
+              title: 'Không tải được đơn hàng',
+              message:
+                  controller.errorMessage ??
+                  'Không thể tải đơn hàng. Kiểm tra kết nối mạng và thử lại.',
+              onRetry: controller.retry,
+            );
+          }
+
           final orders = user == null
               ? <OrderModel>[]
               : controller.ordersForEmail(user.email);
