@@ -67,61 +67,15 @@ service cloud.firestore {
     }
 
     match /orders/{orderId} {
-      function orderOwnedByCaller() {
-        return request.auth.token.email is string
-          && resource.data.userEmail is string
-          && resource.data.userEmail.lower() == request.auth.token.email.lower();
-      }
-
-      function onlyStatusFieldsChanged() {
-        return request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['status', 'updatedAt', 'statusHistory']);
-      }
-
-      // Customer may cancel early or confirm delivery when shipping.
-      function customerStatusUpdateOk() {
-        return isCustomer()
-          && orderOwnedByCaller()
-          && onlyStatusFieldsChanged()
-          && (
-            (
-              resource.data.status in ['placed', 'confirmed', 'pending']
-              && request.resource.data.status == 'cancelled'
-            )
-            || (
-              resource.data.status == 'shipping'
-              && request.resource.data.status == 'delivered'
-            )
-          );
-      }
-
-      function emailMatchesAuth() {
-        return request.auth.token.email is string
-          && request.resource.data.userEmail is string
-          && request.resource.data.userEmail.lower()
-            == request.auth.token.email.lower();
-      }
-
       allow read: if signedIn()
-        && (
-          isStaff()
-          || (
-            request.auth.token.email is string
-            && resource.data.userEmail is string
-            && resource.data.userEmail.lower() == request.auth.token.email.lower()
-          )
-        );
-      // Customer place-order: must be customer role, own email, status placed.
+        && (isStaff() || resource.data.userEmail == request.auth.token.email);
       allow create: if signedIn()
         && isCustomer()
-        && emailMatchesAuth()
-        && request.resource.data.totalAmount is number
+        && request.resource.data.userEmail == request.auth.token.email
         && request.resource.data.totalAmount > 0
         && request.resource.data.items is list
-        && request.resource.data.items.size() > 0
-        && request.resource.data.status == 'placed';
-      allow update: if isStaff() || customerStatusUpdateOk();
-      allow delete: if isStaff();
+        && request.resource.data.items.size() > 0;
+      allow update, delete: if isStaff();
     }
 
     match /seedRuns/{seedId} {
