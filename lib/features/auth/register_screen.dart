@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/router.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/utils/validators.dart';
+import '../../shared/widgets/section_header.dart';
 import '../../state/auth_controller.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -91,7 +93,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
+                    const SectionHeader(
+                      title: 'Thông tin cá nhân',
+                      icon: Icons.person_outline,
+                    ),
                     // ── Visual role badge container ──
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -150,9 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-
-                    // ── Form fields ──
+                    const SizedBox(height: AppSpacing.md),
                     TextFormField(
                       controller: _fullNameController,
                       textInputAction: TextInputAction.next,
@@ -175,7 +178,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       validator: Validators.email,
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: AppSpacing.lg),
+                    const SectionHeader(
+                      title: 'Bảo mật',
+                      icon: Icons.lock_outline,
+                    ),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,

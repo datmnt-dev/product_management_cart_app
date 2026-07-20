@@ -11,6 +11,7 @@ import '../../data/models/user_model.dart';
 import '../../data/models/user_role.dart';
 import '../../shared/components/category_chip_bar.dart';
 import '../../shared/components/product_card.dart';
+import '../../shared/components/profile_sheet.dart';
 import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../shared/widgets/skeleton.dart';
@@ -84,69 +85,22 @@ class _AccountMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
+    final user = context.watch<AuthController>().currentUser;
+    return IconButton(
       tooltip: 'Tài khoản',
-      icon: const Icon(Icons.account_circle_outlined),
-      onSelected: (v) {
-        if (v == 'logout') context.read<AuthController>().logout();
-      },
-      itemBuilder: (_) {
-        final u = context.read<AuthController>().currentUser;
-        return [
-          PopupMenuItem(
-            enabled: false,
-            child: Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: u?.role.accentColor.withValues(alpha: .15),
-                  child: Icon(
-                    u?.role.icon,
-                    color: u?.role.accentColor,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      u?.fullName ?? '',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
-                    ),
-                    Text(
-                      u?.role.vietnameseLabel ?? '',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: u?.role.accentColor,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const PopupMenuDivider(),
-          const PopupMenuItem(
-            value: 'logout',
-            child: ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.logout, color: Colors.red),
-              title: Text(
-                'Đăng xuất',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-        ];
-      },
+      onPressed: () => ProfileSheet.show(context),
+      icon: CircleAvatar(
+        radius: 16,
+        backgroundColor:
+            (user?.role.accentColor ?? Theme.of(context).colorScheme.primary)
+                .withValues(alpha: .15),
+        child: Icon(
+          user?.role.icon ?? Icons.account_circle_outlined,
+          size: 18,
+          color: user?.role.accentColor ??
+              Theme.of(context).colorScheme.primary,
+        ),
+      ),
     );
   }
 }
