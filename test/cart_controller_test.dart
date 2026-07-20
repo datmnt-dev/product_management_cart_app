@@ -31,4 +31,24 @@ void main() {
     controller.remove(product.id);
     expect(controller.isEmpty, isTrue);
   });
+
+  test('cart rejects non-purchasable draft products', () {
+    final controller = CartController();
+    final draft = Product(
+      id: 'draft-1',
+      sku: 'SKU-DRAFT',
+      name: 'Draft item',
+      description: 'Not for sale',
+      category: ProductCategory.other,
+      price: 10000,
+      stockQuantity: 5,
+      status: ProductStatus.draft,
+      imageUrl: '',
+      createdAt: DateTime(2026),
+      updatedAt: DateTime(2026),
+    );
+
+    expect(controller.addProduct(draft), isFalse);
+    expect(controller.isEmpty, isTrue);
+  });
 }

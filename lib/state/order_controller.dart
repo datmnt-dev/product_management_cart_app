@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../core/utils/load_status.dart';
 import '../data/models/cart_item.dart';
 import '../data/models/order_model.dart';
 import '../data/models/user_model.dart';
@@ -22,9 +23,17 @@ class OrderController extends ChangeNotifier {
 
   List<OrderModel> _orders = [];
   RevenueFilter _filter = RevenueFilter.all;
+  LoadStatus _status = LoadStatus.idle;
+  String? _errorMessage;
 
   List<OrderModel> get orders => List.unmodifiable(_orders);
   RevenueFilter get filter => _filter;
+  LoadStatus get status => _status;
+  String? get errorMessage => _errorMessage;
+
+  bool get isLoading => _status == LoadStatus.loading;
+  bool get hasError => _status == LoadStatus.error;
+  bool get isReady => _status == LoadStatus.ready;
 
   List<OrderModel> get filteredOrders {
     return _orders.where((order) => _matchesFilter(order.createdAt)).toList();
@@ -51,6 +60,11 @@ class OrderController extends ChangeNotifier {
   void setFilter(RevenueFilter filter) {
     _filter = filter;
     notifyListeners();
+  }
+
+  /// Re-subscribe to the orders stream after an error or manual refresh.
+  void retry() {
+    _watchOrdersForCurrentUser();
   }
 
   Future<OrderModel> checkout({
@@ -95,16 +109,32 @@ class OrderController extends ChangeNotifier {
     final user = _authController.currentUser;
     if (user == null) {
       _orders = [];
+      _status = LoadStatus.idle;
+      _errorMessage = null;
       notifyListeners();
       return;
     }
 
+    _status = LoadStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
     _subscription = _database
         .watchOrders(userEmail: user.canViewRevenue ? null : user.email)
-        .listen((orders) {
-          _orders = orders;
-          notifyListeners();
-        });
+        .listen(
+          (orders) {
+            _orders = orders;
+            _status = LoadStatus.ready;
+            _errorMessage = null;
+            notifyListeners();
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            _status = LoadStatus.error;
+            _errorMessage =
+                'Không thể tải đơn hàng. Kiểm tra kết nối mạng và thử lại.';
+            notifyListeners();
+          },
+        );
   }
 
   bool _matchesFilter(DateTime date) {
