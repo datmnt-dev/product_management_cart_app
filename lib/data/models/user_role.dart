@@ -58,6 +58,14 @@ extension AppRoleX on AppRole {
     }
   }
 
+  /// Canonical role chrome color (single source of truth for headers, chips,
+  /// demo panels). Do not reintroduce parallel accents on [AppTheme].
+  ///
+  /// | Role     | Hex       |
+  /// |----------|-----------|
+  /// | admin    | `#7C3AED` |
+  /// | manager  | `#0F766E` |
+  /// | customer | `#D97706` |
   Color get accentColor {
     switch (this) {
       case AppRole.admin:

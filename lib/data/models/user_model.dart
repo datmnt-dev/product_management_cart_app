@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'user_role.dart';
 
 class AppUser {
@@ -41,9 +43,17 @@ class AppUser {
       email: map['email']?.toString() ?? '',
       passwordHash: map['passwordHash']?.toString() ?? '',
       role: AppRoleX.fromKey(map['role']?.toString()),
-      createdAt:
-          DateTime.tryParse(map['createdAt']?.toString() ?? '') ??
-          DateTime.now(),
+      createdAt: _dateFrom(map['createdAt']),
     );
+  }
+
+  static DateTime _dateFrom(dynamic raw) {
+    if (raw is Timestamp) {
+      return raw.toDate();
+    }
+    if (raw is DateTime) {
+      return raw;
+    }
+    return DateTime.tryParse(raw?.toString() ?? '') ?? DateTime.now();
   }
 }

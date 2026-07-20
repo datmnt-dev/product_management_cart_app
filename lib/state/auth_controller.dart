@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../core/utils/password_hash.dart';
 import '../data/models/user_model.dart';
 import '../data/models/user_role.dart';
-import '../data/services/local_database.dart';
+import '../data/services/firestore_database.dart';
 
 class AuthActionResult {
   const AuthActionResult({required this.success, required this.message});
@@ -15,7 +15,7 @@ class AuthActionResult {
 
 class AuthController extends ChangeNotifier {
   AuthController({
-    required LocalDatabase database,
+    required FirestoreDatabase database,
     required SharedPreferences preferences,
   }) : _database = database,
        _preferences = preferences;
@@ -23,7 +23,7 @@ class AuthController extends ChangeNotifier {
   static const _rememberMeKey = 'remember_me';
   static const _rememberedEmailKey = 'remembered_email';
 
-  final LocalDatabase _database;
+  final FirestoreDatabase _database;
   final SharedPreferences _preferences;
 
   AppUser? _currentUser;
@@ -38,10 +38,9 @@ class AuthController extends ChangeNotifier {
   Future<void> bootstrap() async {
     _rememberMe = _preferences.getBool(_rememberMeKey) ?? false;
     if (_rememberMe) {
-      final email = _preferences.getString(_rememberedEmailKey);
-      if (email != null) {
-        _currentUser = _database.getUserByEmail(email);
-      }
+      _currentUser = await _database.currentAppUser();
+    } else {
+      await _database.logout();
     }
     _isReady = true;
     notifyListeners();
@@ -53,23 +52,25 @@ class AuthController extends ChangeNotifier {
     required String password,
   }) async {
     final normalizedEmail = email.trim().toLowerCase();
-    if (_database.emailExists(normalizedEmail)) {
+    try {
+      await _database.register(
+        fullName: fullName,
+        email: normalizedEmail,
+        password: password,
+      );
+    } on FirebaseAuthException catch (error) {
+      if (error.code == 'email-already-in-use') {
+        return const AuthActionResult(
+          success: false,
+          message: 'Email này đã được đăng ký.',
+        );
+      }
       return const AuthActionResult(
         success: false,
-        message: 'Email này đã được đăng ký.',
+        message: 'Không thể đăng ký tài khoản. Vui lòng thử lại.',
       );
     }
 
-    final user = AppUser(
-      id: _createId('user'),
-      fullName: fullName.trim(),
-      email: normalizedEmail,
-      passwordHash: hashPassword(password),
-      role: AppRole.customer,
-      createdAt: DateTime.now(),
-    );
-
-    await _database.saveUser(user);
     return const AuthActionResult(
       success: true,
       message: 'Đăng ký thành công. Vui lòng đăng nhập.',
@@ -81,40 +82,37 @@ class AuthController extends ChangeNotifier {
     required String password,
     required bool rememberMe,
   }) async {
-    final user = _database.getUserByEmail(email);
-    if (user == null || user.passwordHash != hashPassword(password)) {
+    try {
+      final user = await _database.login(email: email, password: password);
+      _currentUser = user;
+      _rememberMe = rememberMe;
+
+      await _preferences.setBool(_rememberMeKey, rememberMe);
+      if (rememberMe) {
+        await _preferences.setString(_rememberedEmailKey, user.email);
+      } else {
+        await _preferences.remove(_rememberedEmailKey);
+      }
+
+      notifyListeners();
+      return AuthActionResult(
+        success: true,
+        message: 'Xin chào ${user.fullName} (${user.role.label}).',
+      );
+    } on FirebaseAuthException {
       return const AuthActionResult(
         success: false,
         message: 'Email hoặc mật khẩu không chính xác.',
       );
     }
-
-    _currentUser = user;
-    _rememberMe = rememberMe;
-
-    await _preferences.setBool(_rememberMeKey, rememberMe);
-    if (rememberMe) {
-      await _preferences.setString(_rememberedEmailKey, user.email);
-    } else {
-      await _preferences.remove(_rememberedEmailKey);
-    }
-
-    notifyListeners();
-    return AuthActionResult(
-      success: true,
-      message: 'Xin chào ${user.fullName} (${user.role.label}).',
-    );
   }
 
   Future<void> logout() async {
     _currentUser = null;
     _rememberMe = false;
+    await _database.logout();
     await _preferences.setBool(_rememberMeKey, false);
     await _preferences.remove(_rememberedEmailKey);
     notifyListeners();
-  }
-
-  static String _createId(String prefix) {
-    return '$prefix-${DateTime.now().microsecondsSinceEpoch}';
   }
 }

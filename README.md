@@ -1,17 +1,94 @@
-# product_management_cart_app
+# StoreFlow — Product Management Cart App
 
-A new Flutter project.
+Flutter app quản lý sản phẩm, giỏ hàng, đặt hàng, phân quyền và thống kê doanh thu.
 
-## Getting Started
+| | |
+| --- | --- |
+| **UI brand** | StoreFlow |
+| **Package name** | `product_management_cart_app` |
+| **Backend** | Firebase Auth + Cloud Firestore |
+| **Platforms** | Android, iOS, Web, Windows |
 
-This project is a starting point for a Flutter application.
+## Tài khoản demo (lab only)
 
-A few resources to get you started if this is your first Flutter project:
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@store.local` | `123456` |
+| Manager | `manager@store.local` | `123456` |
+| Customer | `customer@store.local` | `123456` |
+| Edge customer | `edge.customer@store.local` | `123456` |
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+> Chỉ dùng cho môi trường demo / lab. Không dùng mật khẩu demo trên production.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Phân quyền & điều hướng (shell)
+
+App dùng `StatefulShellRoute` + bottom `NavigationBar` (rail trên màn rộng). Tab theo role:
+
+| Role | Tabs |
+| --- | --- |
+| **Customer** | Cửa hàng · Giỏ · Đơn |
+| **Manager** | Kho hàng · Thống kê |
+| **Admin** | Kho hàng · Thống kê · Quyền |
+
+- Staff **không** có tab Đơn / Giỏ — đơn hàng staff xem trong **Thống kê**.
+- Chi tiết / form sản phẩm mở trên root navigator (không dual bottom bar).
+- Customer chỉ thấy sản phẩm **active** (list + deep link UX).
+
+## Chức năng chính
+
+- Firebase Auth (đăng ký/đăng nhập), remember me, profile sheet logout.
+- CRUD sản phẩm (staff): SKU, danh mục, giá, tồn kho, trạng thái, URL ảnh.
+- Giỏ hàng session-local + kiểm tra tồn kho.
+- Checkout Firestore transaction trừ kho → tạo order → clear cart.
+- Lịch sử đơn (customer); dashboard doanh thu (staff) với filter all/day/month/year.
+- Ma trận phân quyền (admin).
+
+## Backend & seed
+
+Backend chính: **Firebase Auth + Cloud Firestore**. Legacy Hive `LocalDatabase` đã gỡ.
+
+### Chạy seed demo
+
+```powershell
+firebase deploy --only firestore:rules --project product-management-cart-app --config firebase.seed.json
+node tools\seed_firestore.js
+firebase deploy --only firestore:rules --project product-management-cart-app
+node tools\verify_firestore_seed.js
+```
+
+Seed: 4 users, 10 products, 6 orders, 1 `seedRuns` document (đủ edge case demo).
+
+## Chạy app
+
+```powershell
+flutter pub get
+flutter run -d chrome
+# hoặc
+flutter run -d windows
+```
+
+## Kiểm tra
+
+```powershell
+flutter analyze
+flutter test
+```
+
+## Cấu trúc (tóm tắt)
+
+```
+lib/
+  app/           # router, shell navigator keys, ProductLabApp
+  core/theme/    # design tokens + ThemeData light/dark
+  data/          # models, FirestoreDatabase
+  features/      # auth, products, cart, orders, statistics, roles
+  shared/        # widgets, components, shell
+  state/         # Auth/Product/Cart/Order controllers
+```
+
+## Ghi chú kỹ thuật
+
+- Theme: `ThemeMode.system` (light + dark tokens).
+- Cart không persist Firestore (session).
+- Checkout lock chống double-tap; stock transaction trước khi tạo order.
+- UI ẩn draft/archived với customer là **UX-only**; rules product read vẫn `signedIn()`.

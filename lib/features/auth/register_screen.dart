@@ -3,7 +3,9 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/router.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/utils/validators.dart';
+import '../../shared/widgets/section_header.dart';
 import '../../state/auth_controller.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -64,9 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final tt = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Đăng ký tài khoản'),
-      ),
+      appBar: AppBar(title: const Text('Đăng ký tài khoản')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -93,7 +93,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-
+                    const SectionHeader(
+                      title: 'Thông tin cá nhân',
+                      icon: Icons.person_outline,
+                    ),
                     // ── Visual role badge container ──
                     Container(
                       padding: const EdgeInsets.all(16),
@@ -152,9 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-
-                    // ── Form fields ──
+                    const SizedBox(height: AppSpacing.md),
                     TextFormField(
                       controller: _fullNameController,
                       textInputAction: TextInputAction.next,
@@ -162,7 +163,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelText: 'Họ và tên',
                         prefixIcon: Icon(Icons.person_outline),
                       ),
-                      validator: (value) => Validators.requiredText(value, 'họ tên'),
+                      validator: (value) =>
+                          Validators.requiredText(value, 'họ tên'),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -176,7 +178,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       validator: Validators.email,
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: AppSpacing.lg),
+                    const SectionHeader(
+                      title: 'Bảo mật',
+                      icon: Icons.lock_outline,
+                    ),
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -185,9 +191,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelText: 'Mật khẩu',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
-                          tooltip: _obscurePassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+                          tooltip: _obscurePassword
+                              ? 'Hiện mật khẩu'
+                              : 'Ẩn mật khẩu',
                           onPressed: () {
-                            setState(() => _obscurePassword = !_obscurePassword);
+                            setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            );
                           },
                           icon: Icon(
                             _obscurePassword
@@ -208,9 +218,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelText: 'Xác nhận mật khẩu',
                         prefixIcon: const Icon(Icons.lock_person_outlined),
                         suffixIcon: IconButton(
-                          tooltip: _obscureConfirmPassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+                          tooltip: _obscureConfirmPassword
+                              ? 'Hiện mật khẩu'
+                              : 'Ẩn mật khẩu',
                           onPressed: () {
-                            setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                            setState(
+                              () => _obscureConfirmPassword =
+                                  !_obscureConfirmPassword,
+                            );
                           },
                           icon: Icon(
                             _obscureConfirmPassword
@@ -249,7 +264,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
-                      onPressed: _isSubmitting ? null : () => context.go(AppRoutes.login),
+                      onPressed: _isSubmitting
+                          ? null
+                          : () => context.go(AppRoutes.login),
                       icon: const Icon(Icons.arrow_back),
                       label: const Text('Quay lại đăng nhập'),
                     ),

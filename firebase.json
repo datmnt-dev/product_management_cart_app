@@ -1,0 +1,28 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "product-management-cart-app",
+          "appId": "1:381218661910:android:d1a2858d3a71e2e044b737",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "product-management-cart-app",
+          "configurations": {
+            "android": "1:381218661910:android:d1a2858d3a71e2e044b737",
+            "ios": "1:381218661910:ios:9ca169ce647559a444b737",
+            "web": "1:381218661910:web:d141d619dfa74df344b737",
+            "windows": "1:381218661910:web:50d8570d201863b144b737"
+          }
+        }
+      }
+    }
+  }
+}

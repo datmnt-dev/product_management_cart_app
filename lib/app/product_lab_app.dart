@@ -20,8 +20,10 @@ class _ProductLabAppState extends State<ProductLabApp> {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      title: 'Product Cart Lab',
+      title: 'StoreFlow',
       theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.system,
       routerConfig: _router,
     );
   }

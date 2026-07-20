@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_radii.dart';
+import '../../core/theme/app_spacing.dart';
+
+/// Empty content placeholder. Name kept stable for existing imports.
 class EmptyState extends StatelessWidget {
   const EmptyState({
     required this.icon,
@@ -17,10 +21,14 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: AppSpacing.xxl,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -36,7 +44,7 @@ class EmptyState extends StatelessWidget {
                     cs.primaryContainer.withValues(alpha: .5),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: AppRadii.borderXxl,
                 boxShadow: [
                   BoxShadow(
                     color: cs.primary.withValues(alpha: .08),
@@ -45,28 +53,24 @@ class EmptyState extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(
-                icon,
-                size: 38,
-                color: cs.onPrimaryContainer,
-              ),
+              child: Icon(icon, size: 38, color: cs.onPrimaryContainer),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: AppSpacing.xl),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              style: tt.titleLarge?.copyWith(
                 fontWeight: FontWeight.w900,
                 letterSpacing: -.3,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.xs),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 300),
               child: Text(
                 message,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                style: tt.bodyMedium?.copyWith(
                   color: cs.onSurfaceVariant,
                   height: 1.5,
                   fontWeight: FontWeight.w500,
@@ -74,7 +78,7 @@ class EmptyState extends StatelessWidget {
               ),
             ),
             if (action != null) ...[
-              const SizedBox(height: 28),
+              const SizedBox(height: AppSpacing.xl + AppSpacing.xs),
               action!,
             ],
           ],

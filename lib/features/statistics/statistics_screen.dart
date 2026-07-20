@@ -4,7 +4,12 @@ import 'package:provider/provider.dart';
 
 import '../../app/router.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/load_status.dart';
 import '../../data/models/order_model.dart';
+import '../../core/theme/app_motion.dart';
+import '../../shared/components/order_expandable_tile.dart';
+import '../../shared/widgets/app_error_state.dart';
+import '../../shared/widgets/app_loading_state.dart';
 import '../../shared/widgets/empty_state.dart';
 import '../../state/order_controller.dart';
 
@@ -19,177 +24,223 @@ class StatisticsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Báo cáo & Thống kê'),
-        actions: [
-          IconButton(
-            tooltip: 'Sản phẩm',
-            onPressed: () => context.go(AppRoutes.products),
-            icon: const Icon(Icons.storefront_outlined),
-          ),
-        ],
       ),
-      body: Consumer<OrderController>(builder: (context, orders, _) {
-        if (orders.orders.isEmpty) {
-          return EmptyState(
-            icon: Icons.analytics_outlined,
-            title: 'Chưa có dữ liệu bán hàng',
-            message: 'Khi người dùng đặt hàng thành công, doanh thu và thống kê sẽ được tổng hợp ở đây.',
-            action: FilledButton.icon(
-              onPressed: () => context.go(AppRoutes.products),
-              icon: const Icon(Icons.shopping_bag_outlined),
-              label: const Text('Xem sản phẩm mua bán'),
-            ),
-          );
-        }
+      body: Consumer<OrderController>(
+        builder: (context, orders, _) {
+          if (orders.status == LoadStatus.loading && orders.orders.isEmpty) {
+            return const AppLoadingState(message: 'Đang tải thống kê...');
+          }
 
-        final filteredOrders = orders.filteredOrders;
+          if (orders.hasError && orders.orders.isEmpty) {
+            return AppErrorState(
+              title: 'Không tải được thống kê',
+              message:
+                  orders.errorMessage ??
+                  'Không thể tải đơn hàng. Kiểm tra kết nối mạng và thử lại.',
+              onRetry: orders.retry,
+            );
+          }
 
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 48),
-          children: [
-            // ── Main Revenue Card ──
-            _RevenueDashboardCard(controller: orders),
-            const SizedBox(height: 24),
-
-            // ── Grid metrics panel ──
-            Row(
-              children: [
-                Expanded(
-                  child: _MiniMetricCard(
-                    title: 'Đơn hàng lọc',
-                    value: '${filteredOrders.length} đơn',
-                    icon: Icons.receipt_long_outlined,
-                    color: cs.primary,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _MiniMetricCard(
-                    title: 'Đơn hàng/Ngày',
-                    value: _calcOrdersPerDay(filteredOrders),
-                    icon: Icons.calendar_today_outlined,
-                    color: cs.secondary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _MiniMetricCard(
-                    title: 'Giá trị trung bình',
-                    value: filteredOrders.isEmpty
-                        ? '0đ'
-                        : formatCurrency(orders.filteredRevenue / filteredOrders.length),
-                    icon: Icons.payments_outlined,
-                    color: Colors.green,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _MiniMetricCard(
-                    title: 'Sản phẩm đã bán',
-                    value: '${_calcTotalItemsSold(filteredOrders)} món',
-                    icon: Icons.shopping_basket_outlined,
-                    color: Colors.blue,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 28),
-
-            // ── Interactive Sales Trend Chart ──
-            Text(
-              'Xu hướng doanh số',
-              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -.3),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Biểu đồ thống kê doanh số trực quan dựa trên bộ lọc thời gian',
-              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-            ),
-            const SizedBox(height: 14),
-            _SalesBarChart(orders: orders.orders, filter: orders.filter),
-            const SizedBox(height: 28),
-
-            // ── Best Selling Products ──
-            Text(
-              'Sản phẩm bán chạy nhất',
-              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -.3),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Top các sản phẩm có số lượng bán ra nhiều nhất',
-              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-            ),
-            const SizedBox(height: 14),
-            _BestSellersList(orders: filteredOrders),
-            const SizedBox(height: 28),
-
-            // ── Time filter buttons ──
-            Text(
-              'Bộ lọc thời gian báo cáo',
-              style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 10),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SegmentedButton<RevenueFilter>(
-                selected: {orders.filter},
-                onSelectionChanged: (s) => orders.setFilter(s.first),
-                segments: const [
-                  ButtonSegment(value: RevenueFilter.all, icon: Icon(Icons.grid_view, size: 16), label: Text('Tất cả')),
-                  ButtonSegment(value: RevenueFilter.day, icon: Icon(Icons.today, size: 16), label: Text('Hôm nay')),
-                  ButtonSegment(value: RevenueFilter.month, icon: Icon(Icons.calendar_month, size: 16), label: Text('Tháng')),
-                  ButtonSegment(value: RevenueFilter.year, icon: Icon(Icons.calendar_today, size: 16), label: Text('Năm')),
-                ],
+          if (orders.orders.isEmpty) {
+            return EmptyState(
+              icon: Icons.analytics_outlined,
+              title: 'Chưa có dữ liệu bán hàng',
+              message:
+                  'Khi người dùng đặt hàng thành công, doanh thu và thống kê sẽ được tổng hợp ở đây.',
+              action: FilledButton.icon(
+                onPressed: () => context.go(AppRoutes.products),
+                icon: const Icon(Icons.shopping_bag_outlined),
+                label: const Text('Xem sản phẩm mua bán'),
               ),
-            ),
-            const SizedBox(height: 28),
+            );
+          }
 
-            Row(
-              children: [
-                Text(
-                  'Danh sách đơn hàng',
-                  style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+          final filteredOrders = orders.filteredOrders;
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 48),
+            children: [
+              // 1. Revenue hero
+              _RevenueDashboardCard(controller: orders),
+              const SizedBox(height: 16),
+
+              // 2. Filter immediately under hero (design §6.8)
+              Text(
+                'Bộ lọc thời gian',
+                style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 10),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SegmentedButton<RevenueFilter>(
+                  selected: {orders.filter},
+                  onSelectionChanged: (s) => orders.setFilter(s.first),
+                  segments: const [
+                    ButtonSegment(
+                      value: RevenueFilter.all,
+                      icon: Icon(Icons.grid_view, size: 16),
+                      label: Text('Tất cả'),
+                    ),
+                    ButtonSegment(
+                      value: RevenueFilter.day,
+                      icon: Icon(Icons.today, size: 16),
+                      label: Text('Hôm nay'),
+                    ),
+                    ButtonSegment(
+                      value: RevenueFilter.month,
+                      icon: Icon(Icons.calendar_month, size: 16),
+                      label: Text('Tháng'),
+                    ),
+                    ButtonSegment(
+                      value: RevenueFilter.year,
+                      icon: Icon(Icons.calendar_today, size: 16),
+                      label: Text('Năm'),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: cs.primaryContainer,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '${filteredOrders.length}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: cs.onPrimaryContainer,
+              ),
+              const SizedBox(height: 24),
+
+              // 3. Metrics from filtered dataset
+              Row(
+                children: [
+                  Expanded(
+                    child: _MiniMetricCard(
+                      title: 'Đơn hàng lọc',
+                      value: '${filteredOrders.length} đơn',
+                      icon: Icons.receipt_long_outlined,
+                      color: cs.primary,
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _MiniMetricCard(
+                      title: 'Đơn hàng/Ngày',
+                      value: _calcOrdersPerDay(filteredOrders),
+                      icon: Icons.calendar_today_outlined,
+                      color: cs.secondary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _MiniMetricCard(
+                      title: 'Giá trị trung bình',
+                      value: filteredOrders.isEmpty
+                          ? '0đ'
+                          : formatCurrency(
+                              orders.filteredRevenue / filteredOrders.length,
+                            ),
+                      icon: Icons.payments_outlined,
+                      color: Colors.green,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _MiniMetricCard(
+                      title: 'Sản phẩm đã bán',
+                      value: '${_calcTotalItemsSold(filteredOrders)} món',
+                      icon: Icons.shopping_basket_outlined,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 28),
 
-            if (filteredOrders.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 20),
-                child: EmptyState(
-                  icon: Icons.filter_alt_off_outlined,
-                  title: 'Không tìm thấy hóa đơn',
-                  message: 'Không có giao dịch nào khớp với bộ lọc thời gian đang chọn.',
+              // 4. Chart bound to filtered orders (not full list)
+              Text(
+                'Xu hướng doanh số',
+                style: tt.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.3,
                 ),
-              )
-            else
-              ...filteredOrders.map((o) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _OrderCard(order: o),
-              )),
-          ],
-        );
-      }),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Biểu đồ theo bộ lọc thời gian đang chọn',
+                style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+              const SizedBox(height: 14),
+              _SalesBarChart(
+                orders: filteredOrders,
+                filter: orders.filter,
+              ),
+              const SizedBox(height: 28),
+
+              // 5. Best sellers from filtered
+              Text(
+                'Sản phẩm bán chạy nhất',
+                style: tt.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -.3,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Top các sản phẩm trong phạm vi bộ lọc',
+                style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+              ),
+              const SizedBox(height: 14),
+              _BestSellersList(orders: filteredOrders),
+              const SizedBox(height: 28),
+
+              // 6. Order list (filtered)
+              Row(
+                children: [
+                  Text(
+                    'Danh sách đơn hàng',
+                    style: tt.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cs.primaryContainer,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${filteredOrders.length}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: cs.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              if (filteredOrders.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(top: 20),
+                  child: EmptyState(
+                    icon: Icons.filter_alt_off_outlined,
+                    title: 'Không tìm thấy hóa đơn',
+                    message:
+                        'Không có giao dịch nào khớp với bộ lọc thời gian đang chọn.',
+                  ),
+                )
+              else
+                ...filteredOrders.map(
+                  (o) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: OrderExpandableTile(order: o),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -220,10 +271,7 @@ class _RevenueDashboardCard extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            cs.primary,
-            cs.primary.withValues(alpha: .85),
-          ],
+          colors: [cs.primary, cs.primary.withValues(alpha: .85)],
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
@@ -239,7 +287,11 @@ class _RevenueDashboardCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.insights, color: Colors.white.withValues(alpha: .75), size: 18),
+              Icon(
+                Icons.insights,
+                color: Colors.white.withValues(alpha: .75),
+                size: 18,
+              ),
               const SizedBox(width: 8),
               Text(
                 'DOANH THU THEO BỘ LỌC',
@@ -271,24 +323,39 @@ class _RevenueDashboardCard extends StatelessWidget {
                 children: [
                   Text(
                     'TẤT CẢ THỜI GIAN',
-                    style: TextStyle(color: Colors.white.withValues(alpha: .6), fontSize: 9, fontWeight: FontWeight.w900),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: .6),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     formatCurrency(controller.totalRevenue),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                    ),
                   ),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: .15),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   'Tổng ${controller.orders.length} đơn hàng',
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 11,
+                  ),
                 ),
               ),
             ],
@@ -341,12 +408,20 @@ class _MiniMetricCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             title,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: Colors.grey,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Colors.black87),
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: Colors.black87,
+            ),
           ),
         ],
       ),
@@ -376,24 +451,38 @@ class _SalesBarChart extends StatelessWidget {
       // Group by Month (Last 6 Months)
       dataPoints = List.generate(6, (index) {
         final date = DateTime(now.year, now.month - (5 - index), 1);
-        final monthOrders = orders.where((o) => o.createdAt.year == date.year && o.createdAt.month == date.month);
-        final total = monthOrders.fold<double>(0, (sum, o) => sum + o.totalAmount);
+        final monthOrders = orders.where(
+          (o) =>
+              o.createdAt.year == date.year && o.createdAt.month == date.month,
+        );
+        final total = monthOrders.fold<double>(
+          0,
+          (sum, o) => sum + o.totalAmount,
+        );
         return _BarData(label: 'T${date.month}', value: total);
       });
     } else {
       // Group by Day (Last 7 Days)
       dataPoints = List.generate(7, (index) {
         final date = now.subtract(Duration(days: 6 - index));
-        final dayOrders = orders.where((o) =>
-            o.createdAt.year == date.year &&
-            o.createdAt.month == date.month &&
-            o.createdAt.day == date.day);
-        final total = dayOrders.fold<double>(0, (sum, o) => sum + o.totalAmount);
+        final dayOrders = orders.where(
+          (o) =>
+              o.createdAt.year == date.year &&
+              o.createdAt.month == date.month &&
+              o.createdAt.day == date.day,
+        );
+        final total = dayOrders.fold<double>(
+          0,
+          (sum, o) => sum + o.totalAmount,
+        );
         return _BarData(label: '${date.day}/${date.month}', value: total);
       });
     }
 
-    final maxVal = dataPoints.fold<double>(0, (max, p) => p.value > max ? p.value : max);
+    final maxVal = dataPoints.fold<double>(
+      0,
+      (max, p) => p.value > max ? p.value : max,
+    );
 
     return Container(
       height: 190,
@@ -427,8 +516,8 @@ class _SalesBarChart extends StatelessWidget {
                   child: TweenAnimationBuilder<double>(
                     key: ValueKey(dp.value),
                     tween: Tween(begin: 0.0, end: ratio.clamp(0.06, 1.0)),
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeOutCubic,
+                    duration: AppMotion.chart,
+                    curve: AppMotion.chartCurve,
                     builder: (context, animatedRatio, child) {
                       return FractionallySizedBox(
                         heightFactor: animatedRatio,
@@ -446,7 +535,9 @@ class _SalesBarChart extends StatelessWidget {
                             cs.primary,
                           ],
                         ),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(6),
+                        ),
                       ),
                     ),
                   ),
@@ -455,7 +546,11 @@ class _SalesBarChart extends StatelessWidget {
                 // Time category label below bar
                 Text(
                   dp.label,
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.grey),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.grey,
+                  ),
                 ),
               ],
             ),
@@ -496,10 +591,11 @@ class _BestSellersList extends StatelessWidget {
       }
     }
 
-    final sortedList = counts.entries
-        .map((e) => _ProductSale(name: e.key, quantity: e.value))
-        .toList()
-      ..sort((a, b) => b.quantity.compareTo(a.quantity));
+    final sortedList =
+        counts.entries
+            .map((e) => _ProductSale(name: e.key, quantity: e.value))
+            .toList()
+          ..sort((a, b) => b.quantity.compareTo(a.quantity));
 
     final bestSellers = sortedList.take(4).toList();
 
@@ -509,7 +605,11 @@ class _BestSellersList extends StatelessWidget {
         alignment: Alignment.center,
         child: Text(
           'Không có dữ liệu mặt hàng',
-          style: TextStyle(color: Colors.grey.shade400, fontSize: 13, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.grey.shade400,
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       );
     }
@@ -539,13 +639,20 @@ class _BestSellersList extends StatelessWidget {
                         item.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '${item.quantity} cái',
-                      style: TextStyle(fontWeight: FontWeight.w900, color: cs.primary, fontSize: 13),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: cs.primary,
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
@@ -568,64 +675,4 @@ class _BestSellersList extends StatelessWidget {
   }
 }
 
-class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order});
-  final OrderModel order;
 
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final shortId = order.id.split('-').last.toUpperCase();
-
-    return Card(
-      child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        leading: CircleAvatar(
-          backgroundColor: cs.secondaryContainer,
-          foregroundColor: cs.onSecondaryContainer,
-          child: const Icon(Icons.receipt_long, size: 20),
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Đơn hàng #$shortId',
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
-            ),
-            Text(
-              formatCurrency(order.totalAmount),
-              style: TextStyle(fontWeight: FontWeight.w900, color: cs.primary, fontSize: 13),
-            ),
-          ],
-        ),
-        subtitle: Text(
-          'Khách hàng: ${order.userEmail}\n${order.totalQuantity} sản phẩm · ${formatDate(order.createdAt)}',
-          style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant, height: 1.4, fontWeight: FontWeight.w600),
-        ),
-        children: [
-          const Divider(height: 20),
-          ...order.items.map((item) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    item.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-                  ),
-                ),
-                Text(
-                  '${item.quantity} × ${formatCurrency(item.unitPrice)}',
-                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-          )),
-        ],
-      ),
-    );
-  }
-}

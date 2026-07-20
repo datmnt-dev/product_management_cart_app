@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/router.dart';
+import '../../core/theme/app_motion.dart';
 import '../../core/utils/validators.dart';
 import '../../data/models/user_role.dart';
 import '../../state/auth_controller.dart';
@@ -109,7 +110,10 @@ class _LoginScreenState extends State<LoginScreen> {
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
                   child: Form(
@@ -117,70 +121,90 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // ── Brand Branding Graphic Header ──
-                        Center(
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 24),
-                            padding: const EdgeInsets.all(18),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  cs.primary,
-                                  cs.primary.withValues(alpha: .85),
-                                ],
+                        // ── Brand header with enter motion ──
+                        TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0, end: 1),
+                          duration: AppMotion.enter,
+                          curve: AppMotion.enterCurve,
+                          builder: (context, t, child) {
+                            if (AppMotion.reduceMotion(context)) {
+                              return child!;
+                            }
+                            return Opacity(
+                              opacity: t,
+                              child: Transform.translate(
+                                offset: Offset(0, 16 * (1 - t)),
+                                child: child,
                               ),
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: cs.primary.withValues(alpha: .18),
-                                  blurRadius: 25,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 46,
-                                  height: 46,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: .18),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.shopping_bag_outlined,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'StoreFlow',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 20,
-                                        letterSpacing: -.3,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Premium Shopping Hub',
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(alpha: .7),
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
+                            );
+                          },
+                          child: Center(
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 24),
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    cs.primary,
+                                    cs.primary.withValues(alpha: .85),
                                   ],
                                 ),
-                              ],
+                                borderRadius: BorderRadius.circular(24),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: cs.primary.withValues(alpha: .18),
+                                    blurRadius: 25,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 46,
+                                    height: 46,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: .18),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.shopping_bag_outlined,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'StoreFlow',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 20,
+                                          letterSpacing: -.3,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Premium Shopping Hub',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(
+                                            alpha: .7,
+                                          ),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -208,7 +232,18 @@ class _LoginScreenState extends State<LoginScreen> {
                         // ── Interactive demo selection panels ──
                         const Text(
                           'Chọn tài khoản Demo nhanh:',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Chỉ dùng cho môi trường demo / lab. Mật khẩu: 123456',
+                          style: tt.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(height: 10),
                         Row(
@@ -259,9 +294,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             labelText: 'Mật khẩu',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
-                              tooltip: _obscurePassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+                              tooltip: _obscurePassword
+                                  ? 'Hiện mật khẩu'
+                                  : 'Ẩn mật khẩu',
                               onPressed: () {
-                                setState(() => _obscurePassword = !_obscurePassword);
+                                setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                );
                               },
                               icon: Icon(
                                 _obscurePassword
@@ -281,7 +320,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           onChanged: (val) => setState(() => _rememberMe = val),
                           title: Text(
                             'Duy trì đăng nhập',
-                            style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                            style: tt.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 18),
@@ -309,7 +350,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 12),
                         OutlinedButton.icon(
-                          onPressed: _isSubmitting ? null : () => context.go(AppRoutes.register),
+                          onPressed: _isSubmitting
+                              ? null
+                              : () => context.go(AppRoutes.register),
                           icon: const Icon(Icons.person_add_outlined),
                           label: const Text('Tạo tài khoản mới'),
                         ),
@@ -385,7 +428,9 @@ class _DemoPanel extends StatelessWidget {
                         Icon(
                           role.icon,
                           size: 22,
-                          color: isSelected ? role.accentColor : cs.onSurfaceVariant,
+                          color: isSelected
+                              ? role.accentColor
+                              : cs.onSurfaceVariant,
                         ),
                         const SizedBox(height: 6),
                         Text(

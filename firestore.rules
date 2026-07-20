@@ -1,0 +1,86 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function hasUserDoc() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function role() {
+      return hasUserDoc() ? userDoc().data.role : null;
+    }
+
+    function isAdmin() {
+      return role() == 'admin';
+    }
+
+    function isManager() {
+      return role() == 'manager';
+    }
+
+    function isStaff() {
+      return isAdmin() || isManager();
+    }
+
+    function isCustomer() {
+      return role() == 'customer';
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (request.auth.uid == userId || isStaff());
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.role == 'customer';
+      allow update: if signedIn()
+        && (
+          isAdmin()
+          || (
+            request.auth.uid == userId
+            && request.resource.data.role == resource.data.role
+          )
+        );
+      allow delete: if isAdmin();
+    }
+
+    match /products/{productId} {
+      allow read: if signedIn();
+      allow create, delete: if isStaff();
+      allow update: if isStaff()
+        || (
+          isCustomer()
+          && resource.data.status == 'active'
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['stockQuantity', 'updatedAt'])
+          && request.resource.data.stockQuantity is int
+          && request.resource.data.stockQuantity >= 0
+          && request.resource.data.stockQuantity < resource.data.stockQuantity
+        );
+    }
+
+    match /orders/{orderId} {
+      allow read: if signedIn()
+        && (isStaff() || resource.data.userEmail == request.auth.token.email);
+      allow create: if signedIn()
+        && isCustomer()
+        && request.resource.data.userEmail == request.auth.token.email
+        && request.resource.data.totalAmount > 0
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0;
+      allow update, delete: if isStaff();
+    }
+
+    match /seedRuns/{seedId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+  }
+}
