@@ -64,9 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final tt = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Đăng ký tài khoản'),
-      ),
+      appBar: AppBar(title: const Text('Đăng ký tài khoản')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -162,7 +160,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelText: 'Họ và tên',
                         prefixIcon: Icon(Icons.person_outline),
                       ),
-                      validator: (value) => Validators.requiredText(value, 'họ tên'),
+                      validator: (value) =>
+                          Validators.requiredText(value, 'họ tên'),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -185,9 +184,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelText: 'Mật khẩu',
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
-                          tooltip: _obscurePassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+                          tooltip: _obscurePassword
+                              ? 'Hiện mật khẩu'
+                              : 'Ẩn mật khẩu',
                           onPressed: () {
-                            setState(() => _obscurePassword = !_obscurePassword);
+                            setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            );
                           },
                           icon: Icon(
                             _obscurePassword
@@ -208,9 +211,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         labelText: 'Xác nhận mật khẩu',
                         prefixIcon: const Icon(Icons.lock_person_outlined),
                         suffixIcon: IconButton(
-                          tooltip: _obscureConfirmPassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+                          tooltip: _obscureConfirmPassword
+                              ? 'Hiện mật khẩu'
+                              : 'Ẩn mật khẩu',
                           onPressed: () {
-                            setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                            setState(
+                              () => _obscureConfirmPassword =
+                                  !_obscureConfirmPassword,
+                            );
                           },
                           icon: Icon(
                             _obscureConfirmPassword
@@ -249,7 +257,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
-                      onPressed: _isSubmitting ? null : () => context.go(AppRoutes.login),
+                      onPressed: _isSubmitting
+                          ? null
+                          : () => context.go(AppRoutes.login),
                       icon: const Icon(Icons.arrow_back),
                       label: const Text('Quay lại đăng nhập'),
                     ),

@@ -45,11 +45,7 @@ class EmptyState extends StatelessWidget {
                   ),
                 ],
               ),
-              child: Icon(
-                icon,
-                size: 38,
-                color: cs.onPrimaryContainer,
-              ),
+              child: Icon(icon, size: 38, color: cs.onPrimaryContainer),
             ),
             const SizedBox(height: 24),
             Text(
@@ -73,10 +69,7 @@ class EmptyState extends StatelessWidget {
                 ),
               ),
             ),
-            if (action != null) ...[
-              const SizedBox(height: 28),
-              action!,
-            ],
+            if (action != null) ...[const SizedBox(height: 28), action!],
           ],
         ),
       ),

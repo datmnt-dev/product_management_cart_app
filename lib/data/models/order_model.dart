@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class OrderLine {
   const OrderLine({
     required this.productId,
@@ -67,7 +69,7 @@ class OrderModel {
       'userEmail': userEmail,
       'items': items.map((item) => item.toMap()).toList(),
       'totalAmount': totalAmount,
-      'createdAt': createdAt.toIso8601String(),
+      'createdAt': createdAt,
     };
   }
 
@@ -88,9 +90,17 @@ class OrderModel {
           (map['totalAmount'] as num?)?.toDouble() ??
           double.tryParse(map['totalAmount']?.toString() ?? '') ??
           0,
-      createdAt:
-          DateTime.tryParse(map['createdAt']?.toString() ?? '') ??
-          DateTime.now(),
+      createdAt: _dateFrom(map['createdAt']),
     );
+  }
+
+  static DateTime _dateFrom(dynamic raw) {
+    if (raw is Timestamp) {
+      return raw.toDate();
+    }
+    if (raw is DateTime) {
+      return raw;
+    }
+    return DateTime.tryParse(raw?.toString() ?? '') ?? DateTime.now();
   }
 }

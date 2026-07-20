@@ -1,18 +1,24 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../data/models/cart_item.dart';
 import '../data/models/order_model.dart';
 import '../data/models/user_model.dart';
-import '../data/services/local_database.dart';
+import '../data/services/firestore_database.dart';
+import 'auth_controller.dart';
 
 enum RevenueFilter { all, day, month, year }
 
 class OrderController extends ChangeNotifier {
-  OrderController(this._database) {
-    _orders = _database.getOrders();
+  OrderController(this._database, this._authController) {
+    _authController.addListener(_watchOrdersForCurrentUser);
+    _watchOrdersForCurrentUser();
   }
 
-  final LocalDatabase _database;
+  final FirestoreDatabase _database;
+  final AuthController _authController;
+  StreamSubscription<List<OrderModel>>? _subscription;
 
   List<OrderModel> _orders = [];
   RevenueFilter _filter = RevenueFilter.all;
@@ -74,9 +80,31 @@ class OrderController extends ChangeNotifier {
     );
 
     await _database.saveOrder(order);
-    _orders = _database.getOrders();
-    notifyListeners();
     return order;
+  }
+
+  @override
+  void dispose() {
+    _authController.removeListener(_watchOrdersForCurrentUser);
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  void _watchOrdersForCurrentUser() {
+    _subscription?.cancel();
+    final user = _authController.currentUser;
+    if (user == null) {
+      _orders = [];
+      notifyListeners();
+      return;
+    }
+
+    _subscription = _database
+        .watchOrders(userEmail: user.canViewRevenue ? null : user.email)
+        .listen((orders) {
+          _orders = orders;
+          notifyListeners();
+        });
   }
 
   bool _matchesFilter(DateTime date) {

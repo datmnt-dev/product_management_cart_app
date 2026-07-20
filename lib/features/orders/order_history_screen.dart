@@ -27,39 +27,48 @@ class OrderHistoryScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Consumer<OrderController>(builder: (context, controller, _) {
-        final orders = user == null ? <OrderModel>[] : controller.ordersForEmail(user.email);
+      body: Consumer<OrderController>(
+        builder: (context, controller, _) {
+          final orders = user == null
+              ? <OrderModel>[]
+              : controller.ordersForEmail(user.email);
 
-        if (orders.isEmpty) {
-          return EmptyState(
-            icon: Icons.receipt_long_outlined,
-            title: 'Chưa có đơn hàng nào',
-            message: 'Hãy bắt đầu đặt hàng và các hóa đơn của bạn sẽ được hiển thị tại đây.',
-            action: FilledButton.icon(
-              onPressed: () => context.go(AppRoutes.products),
-              icon: const Icon(Icons.shopping_bag_outlined),
-              label: const Text('Xem sản phẩm mua sắm'),
-            ),
+          if (orders.isEmpty) {
+            return EmptyState(
+              icon: Icons.receipt_long_outlined,
+              title: 'Chưa có đơn hàng nào',
+              message:
+                  'Hãy bắt đầu đặt hàng và các hóa đơn của bạn sẽ được hiển thị tại đây.',
+              action: FilledButton.icon(
+                onPressed: () => context.go(AppRoutes.products),
+                icon: const Icon(Icons.shopping_bag_outlined),
+                label: const Text('Xem sản phẩm mua sắm'),
+              ),
+            );
+          }
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            children: [
+              _Summary(orders: orders),
+              const SizedBox(height: 20),
+              Text(
+                'Danh sách hóa đơn',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 10),
+              ...orders.map(
+                (o) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _OrderTile(order: o),
+                ),
+              ),
+            ],
           );
-        }
-
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-          children: [
-            _Summary(orders: orders),
-            const SizedBox(height: 20),
-            Text(
-              'Danh sách hóa đơn',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 10),
-            ...orders.map((o) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _OrderTile(order: o),
-            )),
-          ],
-        );
-      }),
+        },
+      ),
     );
   }
 }
@@ -80,10 +89,7 @@ class _Summary extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            cs.secondary,
-            cs.secondary.withValues(alpha: .85),
-          ],
+          colors: [cs.secondary, cs.secondary.withValues(alpha: .85)],
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -103,7 +109,11 @@ class _Summary extends StatelessWidget {
               color: Colors.white.withValues(alpha: .22),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.receipt_long, color: Colors.white, size: 26),
+            child: const Icon(
+              Icons.receipt_long,
+              color: Colors.white,
+              size: 26,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -112,7 +122,10 @@ class _Summary extends StatelessWidget {
               children: [
                 Text(
                   'Tổng cộng ${orders.length} hóa đơn',
-                  style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w900, color: Colors.white),
+                  style: tt.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
+                  ),
                 ),
                 const SizedBox(height: 3),
                 Text(
@@ -163,7 +176,11 @@ class _OrderTile extends StatelessWidget {
             ),
             Text(
               formatCurrency(order.totalAmount),
-              style: TextStyle(fontWeight: FontWeight.w900, color: cs.primary, fontSize: 14),
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                color: cs.primary,
+                fontSize: 14,
+              ),
             ),
           ],
         ),
@@ -171,11 +188,19 @@ class _OrderTile extends StatelessWidget {
           padding: const EdgeInsets.only(top: 4),
           child: Row(
             children: [
-              Icon(Icons.schedule_outlined, size: 12, color: cs.onSurfaceVariant),
+              Icon(
+                Icons.schedule_outlined,
+                size: 12,
+                color: cs.onSurfaceVariant,
+              ),
               const SizedBox(width: 4),
               Text(
                 formatDate(order.createdAt),
-                style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const Spacer(),
               Container(
@@ -186,7 +211,11 @@ class _OrderTile extends StatelessWidget {
                 ),
                 child: const Text(
                   'Hoàn thành',
-                  style: TextStyle(color: Color(0xFF16A34A), fontSize: 9, fontWeight: FontWeight.w900),
+                  style: TextStyle(
+                    color: Color(0xFF16A34A),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ],
@@ -194,35 +223,44 @@ class _OrderTile extends StatelessWidget {
         ),
         children: [
           const Divider(height: 20),
-          ...order.items.map((item) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Row(
-              children: [
-                // Mini bullet visual indicator
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: cs.primary.withValues(alpha: .5),
+          ...order.items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                children: [
+                  // Mini bullet visual indicator
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: cs.primary.withValues(alpha: .5),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    item.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      item.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
-                ),
-                Text(
-                  '${item.quantity} × ${formatCurrency(item.unitPrice)}',
-                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12, fontWeight: FontWeight.w600),
-                ),
-              ],
+                  Text(
+                    '${item.quantity} × ${formatCurrency(item.unitPrice)}',
+                    style: TextStyle(
+                      color: cs.onSurfaceVariant,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          )),
+          ),
         ],
       ),
     );

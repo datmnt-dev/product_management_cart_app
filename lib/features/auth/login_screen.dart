@@ -109,7 +109,10 @@ class _LoginScreenState extends State<LoginScreen> {
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
                   child: Form(
@@ -173,7 +176,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     Text(
                                       'Premium Shopping Hub',
                                       style: TextStyle(
-                                        color: Colors.white.withValues(alpha: .7),
+                                        color: Colors.white.withValues(
+                                          alpha: .7,
+                                        ),
                                         fontSize: 11,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -208,7 +213,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         // ── Interactive demo selection panels ──
                         const Text(
                           'Chọn tài khoản Demo nhanh:',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                         const SizedBox(height: 10),
                         Row(
@@ -259,9 +267,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             labelText: 'Mật khẩu',
                             prefixIcon: const Icon(Icons.lock_outline),
                             suffixIcon: IconButton(
-                              tooltip: _obscurePassword ? 'Hiện mật khẩu' : 'Ẩn mật khẩu',
+                              tooltip: _obscurePassword
+                                  ? 'Hiện mật khẩu'
+                                  : 'Ẩn mật khẩu',
                               onPressed: () {
-                                setState(() => _obscurePassword = !_obscurePassword);
+                                setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                );
                               },
                               icon: Icon(
                                 _obscurePassword
@@ -281,7 +293,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           onChanged: (val) => setState(() => _rememberMe = val),
                           title: Text(
                             'Duy trì đăng nhập',
-                            style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+                            style: tt.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 18),
@@ -309,7 +323,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 12),
                         OutlinedButton.icon(
-                          onPressed: _isSubmitting ? null : () => context.go(AppRoutes.register),
+                          onPressed: _isSubmitting
+                              ? null
+                              : () => context.go(AppRoutes.register),
                           icon: const Icon(Icons.person_add_outlined),
                           label: const Text('Tạo tài khoản mới'),
                         ),
@@ -385,7 +401,9 @@ class _DemoPanel extends StatelessWidget {
                         Icon(
                           role.icon,
                           size: 22,
-                          color: isSelected ? role.accentColor : cs.onSurfaceVariant,
+                          color: isSelected
+                              ? role.accentColor
+                              : cs.onSurfaceVariant,
                         ),
                         const SizedBox(height: 6),
                         Text(
