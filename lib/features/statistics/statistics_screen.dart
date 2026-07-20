@@ -6,6 +6,8 @@ import '../../app/router.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/load_status.dart';
 import '../../data/models/order_model.dart';
+import '../../core/theme/app_motion.dart';
+import '../../shared/components/order_expandable_tile.dart';
 import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/app_loading_state.dart';
 import '../../shared/widgets/empty_state.dart';
@@ -58,11 +60,48 @@ class StatisticsScreen extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 48),
             children: [
-              // ── Main Revenue Card ──
+              // 1. Revenue hero
               _RevenueDashboardCard(controller: orders),
+              const SizedBox(height: 16),
+
+              // 2. Filter immediately under hero (design §6.8)
+              Text(
+                'Bộ lọc thời gian',
+                style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 10),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SegmentedButton<RevenueFilter>(
+                  selected: {orders.filter},
+                  onSelectionChanged: (s) => orders.setFilter(s.first),
+                  segments: const [
+                    ButtonSegment(
+                      value: RevenueFilter.all,
+                      icon: Icon(Icons.grid_view, size: 16),
+                      label: Text('Tất cả'),
+                    ),
+                    ButtonSegment(
+                      value: RevenueFilter.day,
+                      icon: Icon(Icons.today, size: 16),
+                      label: Text('Hôm nay'),
+                    ),
+                    ButtonSegment(
+                      value: RevenueFilter.month,
+                      icon: Icon(Icons.calendar_month, size: 16),
+                      label: Text('Tháng'),
+                    ),
+                    ButtonSegment(
+                      value: RevenueFilter.year,
+                      icon: Icon(Icons.calendar_today, size: 16),
+                      label: Text('Năm'),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 24),
 
-              // ── Grid metrics panel ──
+              // 3. Metrics from filtered dataset
               Row(
                 children: [
                   Expanded(
@@ -112,7 +151,7 @@ class StatisticsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 28),
 
-              // ── Interactive Sales Trend Chart ──
+              // 4. Chart bound to filtered orders (not full list)
               Text(
                 'Xu hướng doanh số',
                 style: tt.titleMedium?.copyWith(
@@ -122,14 +161,17 @@ class StatisticsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Biểu đồ thống kê doanh số trực quan dựa trên bộ lọc thời gian',
+                'Biểu đồ theo bộ lọc thời gian đang chọn',
                 style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               ),
               const SizedBox(height: 14),
-              _SalesBarChart(orders: orders.orders, filter: orders.filter),
+              _SalesBarChart(
+                orders: filteredOrders,
+                filter: orders.filter,
+              ),
               const SizedBox(height: 28),
 
-              // ── Best Selling Products ──
+              // 5. Best sellers from filtered
               Text(
                 'Sản phẩm bán chạy nhất',
                 style: tt.titleMedium?.copyWith(
@@ -139,50 +181,14 @@ class StatisticsScreen extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                'Top các sản phẩm có số lượng bán ra nhiều nhất',
+                'Top các sản phẩm trong phạm vi bộ lọc',
                 style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               ),
               const SizedBox(height: 14),
               _BestSellersList(orders: filteredOrders),
               const SizedBox(height: 28),
 
-              // ── Time filter buttons ──
-              Text(
-                'Bộ lọc thời gian báo cáo',
-                style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SegmentedButton<RevenueFilter>(
-                  selected: {orders.filter},
-                  onSelectionChanged: (s) => orders.setFilter(s.first),
-                  segments: const [
-                    ButtonSegment(
-                      value: RevenueFilter.all,
-                      icon: Icon(Icons.grid_view, size: 16),
-                      label: Text('Tất cả'),
-                    ),
-                    ButtonSegment(
-                      value: RevenueFilter.day,
-                      icon: Icon(Icons.today, size: 16),
-                      label: Text('Hôm nay'),
-                    ),
-                    ButtonSegment(
-                      value: RevenueFilter.month,
-                      icon: Icon(Icons.calendar_month, size: 16),
-                      label: Text('Tháng'),
-                    ),
-                    ButtonSegment(
-                      value: RevenueFilter.year,
-                      icon: Icon(Icons.calendar_today, size: 16),
-                      label: Text('Năm'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 28),
-
+              // 6. Order list (filtered)
               Row(
                 children: [
                   Text(
@@ -228,7 +234,7 @@ class StatisticsScreen extends StatelessWidget {
                 ...filteredOrders.map(
                   (o) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: _OrderCard(order: o),
+                    child: OrderExpandableTile(order: o),
                   ),
                 ),
             ],
@@ -510,8 +516,8 @@ class _SalesBarChart extends StatelessWidget {
                   child: TweenAnimationBuilder<double>(
                     key: ValueKey(dp.value),
                     tween: Tween(begin: 0.0, end: ratio.clamp(0.06, 1.0)),
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeOutCubic,
+                    duration: AppMotion.chart,
+                    curve: AppMotion.chartCurve,
                     builder: (context, animatedRatio, child) {
                       return FractionallySizedBox(
                         heightFactor: animatedRatio,
@@ -669,82 +675,4 @@ class _BestSellersList extends StatelessWidget {
   }
 }
 
-class _OrderCard extends StatelessWidget {
-  const _OrderCard({required this.order});
-  final OrderModel order;
 
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final shortId = order.id.split('-').last.toUpperCase();
-
-    return Card(
-      child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        leading: CircleAvatar(
-          backgroundColor: cs.secondaryContainer,
-          foregroundColor: cs.onSecondaryContainer,
-          child: const Icon(Icons.receipt_long, size: 20),
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Đơn hàng #$shortId',
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
-            ),
-            Text(
-              formatCurrency(order.totalAmount),
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                color: cs.primary,
-                fontSize: 13,
-              ),
-            ),
-          ],
-        ),
-        subtitle: Text(
-          'Khách hàng: ${order.userEmail}\n${order.totalQuantity} sản phẩm · ${formatDate(order.createdAt)}',
-          style: TextStyle(
-            fontSize: 11,
-            color: cs.onSurfaceVariant,
-            height: 1.4,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        children: [
-          const Divider(height: 20),
-          ...order.items.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      item.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    '${item.quantity} × ${formatCurrency(item.unitPrice)}',
-                    style: TextStyle(
-                      color: cs.onSurfaceVariant,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

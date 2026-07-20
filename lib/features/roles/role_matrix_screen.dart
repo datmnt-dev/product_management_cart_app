@@ -96,6 +96,16 @@ class RoleMatrixScreen extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(height: 10),
+                Text(
+                  'Chỉ dùng cho môi trường demo / lab. Không dùng mật khẩu demo trên production.',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: .75),
+                    fontSize: 12,
+                    height: 1.35,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),
