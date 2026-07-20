@@ -23,41 +23,31 @@ class OrderController extends ChangeNotifier {
 
   List<OrderModel> _orders = [];
   RevenueFilter _filter = RevenueFilter.all;
-  OrderStatus? _statusFilter;
   LoadStatus _status = LoadStatus.idle;
   String? _errorMessage;
-  bool _updating = false;
 
   List<OrderModel> get orders => List.unmodifiable(_orders);
   RevenueFilter get filter => _filter;
-  OrderStatus? get statusFilter => _statusFilter;
   LoadStatus get status => _status;
   String? get errorMessage => _errorMessage;
-  bool get isUpdating => _updating;
 
   bool get isLoading => _status == LoadStatus.loading;
   bool get hasError => _status == LoadStatus.error;
   bool get isReady => _status == LoadStatus.ready;
 
   List<OrderModel> get filteredOrders {
-    return _orders.where((order) {
-      if (!_matchesFilter(order.createdAt)) return false;
-      if (_statusFilter != null && order.status != _statusFilter) return false;
-      return true;
-    }).toList();
+    return _orders.where((order) => _matchesFilter(order.createdAt)).toList();
   }
 
-  /// Revenue excludes cancelled orders.
   double get totalRevenue {
-    return _orders
-        .where((o) => o.status.countsTowardRevenue)
-        .fold<double>(0, (total, order) => total + order.totalAmount);
+    return _orders.fold<double>(0, (total, order) => total + order.totalAmount);
   }
 
   double get filteredRevenue {
-    return filteredOrders
-        .where((o) => o.status.countsTowardRevenue)
-        .fold<double>(0, (total, order) => total + order.totalAmount);
+    return filteredOrders.fold<double>(
+      0,
+      (total, order) => total + order.totalAmount,
+    );
   }
 
   List<OrderModel> ordersForEmail(String email) {
@@ -72,17 +62,11 @@ class OrderController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setStatusFilter(OrderStatus? status) {
-    _statusFilter = status;
-    notifyListeners();
-  }
-
   /// Re-subscribe to the orders stream after an error or manual refresh.
   void retry() {
     _watchOrdersForCurrentUser();
   }
 
-  /// Checkout: stock deduction + order create in **one** Firestore transaction.
   Future<OrderModel> checkout({
     required AppUser user,
     required List<CartItem> items,
@@ -98,131 +82,19 @@ class OrderController extends ChangeNotifier {
       );
     }).toList();
 
-    final email = user.email.trim().toLowerCase();
     final order = OrderModel(
       id: 'order-${now.microsecondsSinceEpoch}',
-      userEmail: email,
+      userEmail: user.email,
       items: orderItems,
       totalAmount: orderItems.fold<double>(
         0,
         (total, item) => total + item.totalPrice,
       ),
       createdAt: now,
-      updatedAt: now,
-      status: OrderStatus.placed,
-      statusHistory: [
-        OrderStatusEvent(
-          status: OrderStatus.placed,
-          at: now,
-          byEmail: email,
-          note: 'Khách đã gửi đơn hàng',
-        ),
-      ],
     );
 
-    final quantities = {
-      for (final item in items) item.product.id: item.quantity,
-    };
-
-    return _database.placeOrderAtomic(
-      order: order,
-      quantitiesByProductId: quantities,
-    );
-  }
-
-  /// Staff or customer status transition with validation.
-  Future<OrderModel> updateStatus({
-    required OrderModel order,
-    required OrderStatus next,
-    required AppUser actor,
-    String note = '',
-  }) async {
-    final isStaff = actor.canViewRevenue;
-    if (!OrderTransitions.isValidTransition(
-      from: order.status,
-      to: next,
-      isStaff: isStaff,
-    )) {
-      throw StateError(
-        'Không thể chuyển trạng thái từ ${order.status.label} sang ${next.label}.',
-      );
-    }
-
-    // Customer may only touch own orders.
-    if (!isStaff &&
-        order.userEmail.trim().toLowerCase() !=
-            actor.email.trim().toLowerCase()) {
-      throw StateError('Bạn không có quyền cập nhật đơn này.');
-    }
-
-    final updated = order.withStatusTransition(
-      next: next,
-      byEmail: actor.email,
-      note: note.isEmpty ? _defaultNote(next, isStaff: isStaff) : note,
-    );
-
-    _updating = true;
-    notifyListeners();
-    try {
-      await _database.saveOrder(updated);
-      return updated;
-    } finally {
-      _updating = false;
-      notifyListeners();
-    }
-  }
-
-  Future<OrderModel> advanceStaff(OrderModel order, AppUser staff) async {
-    final next = order.status.nextStaffStatus;
-    if (next == null) {
-      throw StateError('Đơn đã ở trạng thái cuối, không thể tiến tiếp.');
-    }
-    return updateStatus(
-      order: order,
-      next: next,
-      actor: staff,
-      note: order.status.nextStaffActionLabel ?? '',
-    );
-  }
-
-  Future<OrderModel> cancelOrder(OrderModel order, AppUser actor) async {
-    return updateStatus(
-      order: order,
-      next: OrderStatus.cancelled,
-      actor: actor,
-      note: actor.canViewRevenue
-          ? 'Cửa hàng hủy đơn'
-          : 'Khách hủy đơn',
-    );
-  }
-
-  Future<OrderModel> customerConfirmReceived(
-    OrderModel order,
-    AppUser customer,
-  ) async {
-    return updateStatus(
-      order: order,
-      next: OrderStatus.delivered,
-      actor: customer,
-      note: 'Khách xác nhận đã nhận hàng',
-    );
-  }
-
-  static String _defaultNote(OrderStatus status, {required bool isStaff}) {
-    switch (status) {
-      case OrderStatus.placed:
-        return 'Đã gửi đơn';
-      case OrderStatus.confirmed:
-        return 'Shop xác nhận đã nhận đơn';
-      case OrderStatus.preparing:
-        return 'Shop bắt đầu chuẩn bị hàng';
-      case OrderStatus.shipping:
-        return 'Shop bàn giao vận chuyển';
-      case OrderStatus.delivered:
-        return isStaff ? 'Shop xác nhận đã giao' : 'Khách xác nhận đã nhận';
-      case OrderStatus.cancelled:
-        return 'Đơn đã hủy';
-    }
+    await _database.saveOrder(order);
+    return order;
   }
 
   @override

@@ -16,6 +16,7 @@ import '../../shared/widgets/product_image.dart';
 import '../../state/auth_controller.dart';
 import '../../state/cart_controller.dart';
 import '../../state/order_controller.dart';
+import '../../state/product_controller.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -179,6 +180,7 @@ class _CartScreenState extends State<CartScreen> {
 
     final cart = context.read<CartController>();
     final user = context.read<AuthController>().currentUser;
+    final productController = context.read<ProductController>();
     final orderController = context.read<OrderController>();
     final messenger = ScaffoldMessenger.of(context);
     if (user == null || cart.isEmpty) return;
@@ -232,11 +234,29 @@ class _CartScreenState extends State<CartScreen> {
     if (confirmed != true || !mounted) return;
 
     setState(() => _checkingOut = true);
+    var stockAlreadyReduced = false;
 
     try {
       final items = List<CartItem>.from(cart.items);
+      final quantities = {
+        for (final item in items) item.product.id: item.quantity,
+      };
 
-      // Stock + order are written in one Firestore transaction (no orphan stock).
+      final hasStock = await productController.reduceStock(quantities);
+      if (!hasStock) {
+        if (!mounted) return;
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Một số sản phẩm đã hết hàng hoặc không đủ số lượng.',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      stockAlreadyReduced = true;
+
       final order = await orderController.checkout(user: user, items: items);
       cart.clear();
 
@@ -267,7 +287,7 @@ class _CartScreenState extends State<CartScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Đã gửi đơn thành công!',
+                  'Đặt hàng thành công!',
                   textAlign: TextAlign.center,
                   style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w900,
@@ -275,8 +295,7 @@ class _CartScreenState extends State<CartScreen> {
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Đơn #$orderLabel đang ở trạng thái "Đã gửi đơn".\n'
-                  'Cửa hàng sẽ xác nhận khi nhận đơn — bạn có thể theo dõi trong mục Đơn.',
+                  'Đơn #$orderLabel đã được tạo.',
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -300,42 +319,24 @@ class _CartScreenState extends State<CartScreen> {
         },
       );
     } catch (e, st) {
-      debugPrint('checkout_failed err=$e\n$st');
+      debugPrint(
+        'checkout_failed after_stock=$stockAlreadyReduced err=$e\n$st',
+      );
       if (!mounted) return;
-      final message = _checkoutErrorMessage(e);
       messenger.showSnackBar(
         SnackBar(
-          content: Text(message),
+          content: Text(
+            stockAlreadyReduced
+                ? 'Đã trừ tồn kho nhưng tạo đơn thất bại. '
+                    'Vui lòng liên hệ hỗ trợ hoặc thử lại sau.'
+                : 'Không thể đặt hàng. Vui lòng thử lại.',
+          ),
           behavior: SnackBarBehavior.floating,
         ),
       );
     } finally {
       if (mounted) setState(() => _checkingOut = false);
     }
-  }
-
-  String _checkoutErrorMessage(Object e) {
-    final raw = e.toString();
-    if (raw.contains('permission-denied') ||
-        raw.contains('PERMISSION_DENIED')) {
-      return 'Không có quyền tạo đơn (permission-denied). '
-          'Hãy đăng nhập lại bằng tài khoản customer và thử lại.';
-    }
-    if (raw.contains('Không đủ tồn kho') ||
-        raw.contains('insufficient-stock') ||
-        raw.contains('Sản phẩm không tồn tại')) {
-      return raw.replaceFirst('Bad state: ', '').replaceFirst('Exception: ', '');
-    }
-    if (raw.contains('email')) {
-      return 'Phiên đăng nhập thiếu email. Vui lòng đăng xuất và đăng nhập lại.';
-    }
-    // Surface a readable message for lab debugging (not only generic copy).
-    final short = raw
-        .replaceFirst('Bad state: ', '')
-        .replaceFirst('Exception: ', '')
-        .replaceFirst('[cloud_firestore/permission-denied] ', '');
-    if (short.length < 160) return 'Không thể đặt hàng: $short';
-    return 'Không thể đặt hàng. Vui lòng thử lại.';
   }
 }
 
