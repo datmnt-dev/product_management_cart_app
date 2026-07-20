@@ -133,10 +133,9 @@ class FirestoreDatabase {
   Future<bool> reduceStock(Map<String, int> quantitiesByProductId) async {
     try {
       await _firestore.runTransaction((transaction) async {
-        final productRefs = quantitiesByProductId.map((id, quantity) {
-          return MapEntry(id, _products.doc(id));
-        });
-
+        final productRefs = <String, DocumentReference<Map<String, dynamic>>>{
+          for (final id in quantitiesByProductId.keys) id: _products.doc(id),
+        };
         final snapshots = <String, DocumentSnapshot<Map<String, dynamic>>>{};
         for (final entry in productRefs.entries) {
           snapshots[entry.key] = await transaction.get(entry.value);
@@ -173,6 +172,86 @@ class FirestoreDatabase {
     } catch (_) {
       return false;
     }
+  }
+
+  /// Atomically reduce stock and create the order.
+  ///
+  /// Prevents the inconsistent state where stock is reduced but order write fails.
+  Future<OrderModel> placeOrderAtomic({
+    required OrderModel order,
+    required Map<String, int> quantitiesByProductId,
+  }) async {
+    final authEmail = _auth.currentUser?.email?.trim().toLowerCase();
+    if (authEmail == null || authEmail.isEmpty) {
+      throw StateError(
+        'Phiên đăng nhập không có email. Vui lòng đăng nhập lại.',
+      );
+    }
+
+    // Always bind order to Auth token email (rules compare against token.email).
+    final normalized = order.copyWith(
+      userEmail: authEmail,
+      statusHistory: order.statusHistory
+          .map(
+            (e) => OrderStatusEvent(
+              status: e.status,
+              at: e.at,
+              byEmail: e.byEmail.trim().isEmpty
+                  ? authEmail
+                  : e.byEmail.trim().toLowerCase(),
+              note: e.note,
+            ),
+          )
+          .toList(),
+    );
+
+    final orderRef = _orders.doc(normalized.id);
+    final payload = normalized.toMap();
+
+    await _firestore.runTransaction((transaction) async {
+      // All reads first (Firestore transaction requirement).
+      final productRefs = <String, DocumentReference<Map<String, dynamic>>>{
+        for (final id in quantitiesByProductId.keys) id: _products.doc(id),
+      };
+      final snapshots = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+      for (final entry in productRefs.entries) {
+        snapshots[entry.key] = await transaction.get(entry.value);
+      }
+
+      for (final entry in quantitiesByProductId.entries) {
+        final snapshot = snapshots[entry.key];
+        final data = snapshot?.data();
+        if (snapshot == null || !snapshot.exists || data == null) {
+          throw StateError('Sản phẩm không tồn tại (${entry.key}).');
+        }
+        final product = Product.fromMap({'id': snapshot.id, ...data});
+        if (!product.canBePurchased ||
+            product.stockQuantity < entry.value ||
+            entry.value <= 0) {
+          throw StateError(
+            'Không đủ tồn kho cho "${product.name}" '
+            '(còn ${product.stockQuantity}, cần ${entry.value}).',
+          );
+        }
+      }
+
+      for (final entry in quantitiesByProductId.entries) {
+        final ref = productRefs[entry.key]!;
+        final snapshot = snapshots[entry.key]!;
+        final product = Product.fromMap({
+          'id': snapshot.id,
+          ...snapshot.data()!,
+        });
+        transaction.update(ref, {
+          'stockQuantity': product.stockQuantity - entry.value,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      transaction.set(orderRef, payload);
+    });
+
+    return normalized;
   }
 
   Stream<List<OrderModel>> watchOrders({String? userEmail}) {

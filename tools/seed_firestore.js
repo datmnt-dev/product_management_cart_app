@@ -194,6 +194,7 @@ const orderTemplates = [
     id: "seed-order-today-mixed",
     userEmail: "customer@store.local",
     createdAt: now,
+    status: "placed",
     items: [
       line("seed-android-budget", 2),
       line("seed-headphone", 1),
@@ -203,6 +204,7 @@ const orderTemplates = [
     id: "seed-order-yesterday-low-stock",
     userEmail: "customer@store.local",
     createdAt: daysAgo(1),
+    status: "confirmed",
     items: [
       line("seed-gaming-laptop-low-stock", 1),
     ],
@@ -211,6 +213,7 @@ const orderTemplates = [
     id: "seed-order-this-month-home",
     userEmail: "edge.customer@store.local",
     createdAt: daysAgo(8),
+    status: "preparing",
     items: [
       line("seed-air-fryer", 1),
       line("seed-backpack-no-image", 2),
@@ -220,6 +223,7 @@ const orderTemplates = [
     id: "seed-order-previous-month",
     userEmail: "customer@store.local",
     createdAt: monthsAgo(1),
+    status: "shipping",
     items: [
       line("seed-iphone-15-pro", 1),
       line("seed-headphone", 2),
@@ -229,6 +233,7 @@ const orderTemplates = [
     id: "seed-order-this-year-expensive",
     userEmail: "edge.customer@store.local",
     createdAt: monthsAgo(3),
+    status: "delivered",
     items: [
       line("seed-macbook-air", 1),
     ],
@@ -237,6 +242,7 @@ const orderTemplates = [
     id: "seed-order-last-year",
     userEmail: "customer@store.local",
     createdAt: new Date(now.getFullYear() - 1, 10, 15, 9, 30, 0),
+    status: "cancelled",
     items: [
       line("seed-android-budget", 1),
       line("seed-air-fryer", 1),
@@ -266,13 +272,55 @@ function buildOrder(template) {
     (total, item) => total + item.unitPrice * item.quantity,
     0,
   );
+  const status = template.status || "placed";
+  const createdAt = template.createdAt;
+  const statusHistory = buildStatusHistory(status, createdAt, template.userEmail);
   return {
     id: template.id,
     userEmail: template.userEmail,
     items,
     totalAmount,
-    createdAt: template.createdAt,
+    createdAt,
+    updatedAt: statusHistory[statusHistory.length - 1].at,
+    status,
+    statusHistory,
   };
+}
+
+function buildStatusHistory(status, createdAt, userEmail) {
+  const pipeline = ["placed", "confirmed", "preparing", "shipping", "delivered"];
+  if (status === "cancelled") {
+    return [
+      {
+        status: "placed",
+        at: createdAt,
+        byEmail: userEmail,
+        note: "Khách đã gửi đơn hàng",
+      },
+      {
+        status: "cancelled",
+        at: new Date(createdAt.getTime() + 60 * 60 * 1000),
+        byEmail: userEmail,
+        note: "Khách hủy đơn",
+      },
+    ];
+  }
+  const end = pipeline.indexOf(status);
+  return pipeline.slice(0, Math.max(end, 0) + 1).map((step, index) => ({
+    status: step,
+    at: new Date(createdAt.getTime() + index * 2 * 60 * 60 * 1000),
+    byEmail: index === 0 ? userEmail : "admin@store.local",
+    note:
+      step === "placed"
+        ? "Khách đã gửi đơn hàng"
+        : step === "confirmed"
+          ? "Shop xác nhận đã nhận đơn"
+          : step === "preparing"
+            ? "Shop bắt đầu chuẩn bị hàng"
+            : step === "shipping"
+              ? "Shop bàn giao vận chuyển"
+              : "Đã giao / hoàn thành",
+  }));
 }
 
 async function main() {

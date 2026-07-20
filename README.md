@@ -39,8 +39,10 @@ App dùng `StatefulShellRoute` + bottom `NavigationBar` (rail trên màn rộng)
 - Firebase Auth (đăng ký/đăng nhập), remember me, profile sheet logout.
 - CRUD sản phẩm (staff): SKU, danh mục, giá, tồn kho, trạng thái, URL ảnh.
 - Giỏ hàng session-local + kiểm tra tồn kho.
-- Checkout Firestore transaction trừ kho → tạo order → clear cart.
-- Lịch sử đơn (customer); dashboard doanh thu (staff) với filter all/day/month/year.
+- Checkout Firestore transaction trừ kho → tạo order (status **Đã gửi đơn**) → clear cart.
+- Tracking đơn: `placed → confirmed → preparing → shipping → delivered` (+ `cancelled`).
+- Customer: hủy sớm, xác nhận đã nhận khi đang giao; Staff: xác nhận nhận đơn và tiến trạng thái trên Thống kê.
+- Lịch sử đơn (customer) lọc theo status; dashboard doanh thu (staff) loại đơn hủy.
 - Ma trận phân quyền (admin).
 
 ## Backend & seed

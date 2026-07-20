@@ -42,16 +42,17 @@ class OrderHistoryScreen extends StatelessWidget {
             );
           }
 
-          final orders = user == null
+          final allMine = user == null
               ? <OrderModel>[]
               : controller.ordersForEmail(user.email);
 
-          if (orders.isEmpty) {
+          if (allMine.isEmpty) {
             return EmptyState(
               icon: Icons.receipt_long_outlined,
               title: 'Chưa có đơn hàng nào',
               message:
-                  'Hãy bắt đầu đặt hàng và các hóa đơn của bạn sẽ được hiển thị tại đây.',
+                  'Hãy bắt đầu đặt hàng và theo dõi trạng thái đơn tại đây '
+                  '(đã gửi → shop nhận → chuẩn bị → giao → hoàn thành).',
               action: FilledButton.icon(
                 onPressed: () => context.go(AppRoutes.products),
                 icon: const Icon(Icons.shopping_bag_outlined),
@@ -60,38 +61,100 @@ class OrderHistoryScreen extends StatelessWidget {
             );
           }
 
-          return ListView.builder(
+          final statusFilter = controller.statusFilter;
+          final orders = statusFilter == null
+              ? allMine
+              : allMine.where((o) => o.status == statusFilter).toList();
+
+          return ListView(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
               AppSpacing.xs,
               AppSpacing.md,
               AppSpacing.xxxl,
             ),
-            itemCount: orders.length + 2,
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                  child: _Summary(orders: orders),
-                );
-              }
-              if (index == 1) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text(
-                    'Danh sách hóa đơn',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
+            children: [
+              _Summary(orders: allMine),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Lọc theo trạng thái',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 8),
+              _StatusFilterBar(
+                selected: statusFilter,
+                onSelected: controller.setStatusFilter,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Đơn của tôi (${orders.length})',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              if (orders.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: EmptyState(
+                    icon: Icons.filter_alt_off_outlined,
+                    title: 'Không có đơn phù hợp',
+                    message: 'Thử đổi bộ lọc trạng thái để xem các đơn khác.',
                   ),
-                );
-              }
-              final order = orders[index - 2];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: OrderExpandableTile(order: order),
-              );
-            },
+                )
+              else
+                ...orders.map(
+                  (o) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: OrderExpandableTile(order: o),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _StatusFilterBar extends StatelessWidget {
+  const _StatusFilterBar({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final OrderStatus? selected;
+  final ValueChanged<OrderStatus?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final options = <(OrderStatus?, String)>[
+      (null, 'Tất cả'),
+      (OrderStatus.placed, 'Đã gửi'),
+      (OrderStatus.confirmed, 'Đã nhận'),
+      (OrderStatus.preparing, 'Chuẩn bị'),
+      (OrderStatus.shipping, 'Đang giao'),
+      (OrderStatus.delivered, 'Hoàn thành'),
+      (OrderStatus.cancelled, 'Đã hủy'),
+    ];
+
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: options.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final (status, label) = options[index];
+          final isSelected = selected == status;
+          return FilterChip(
+            label: Text(label),
+            selected: isSelected,
+            onSelected: (_) => onSelected(status),
+            showCheckmark: false,
+            visualDensity: VisualDensity.compact,
           );
         },
       ),
@@ -107,7 +170,10 @@ class _Summary extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final total = orders.fold<double>(0, (v, o) => v + o.totalAmount);
+    final total = orders
+        .where((o) => o.status.countsTowardRevenue)
+        .fold<double>(0, (v, o) => v + o.totalAmount);
+    final active = orders.where((o) => !o.status.isTerminal).length;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -147,7 +213,7 @@ class _Summary extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tổng cộng ${orders.length} hóa đơn',
+                  'Tổng ${orders.length} đơn · $active đang xử lý',
                   style: tt.titleMedium?.copyWith(
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
@@ -155,7 +221,7 @@ class _Summary extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'Đã chi tiêu: ${formatCurrency(total)}',
+                  'Đã chi (không tính hủy): ${formatCurrency(total)}',
                   style: TextStyle(
                     color: Colors.white.withValues(alpha: .9),
                     fontWeight: FontWeight.w700,
