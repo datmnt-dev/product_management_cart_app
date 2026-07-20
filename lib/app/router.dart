@@ -10,8 +10,10 @@ import '../features/products/product_form_screen.dart';
 import '../features/products/product_list_screen.dart';
 import '../features/roles/role_matrix_screen.dart';
 import '../features/statistics/statistics_screen.dart';
+import '../shared/shell/app_shell.dart';
 import '../shared/widgets/empty_state.dart';
 import '../state/auth_controller.dart';
+import 'app_navigator_keys.dart';
 
 class AppRoutes {
   static const login = '/login';
@@ -32,6 +34,7 @@ class AppRoutes {
 
 GoRouter buildAppRouter(AuthController authController) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: authController.isAuthenticated
         ? AppRoutes.products
         : AppRoutes.login,
@@ -85,49 +88,85 @@ GoRouter buildAppRouter(AuthController authController) {
         path: AppRoutes.register,
         builder: (context, state) => const RegisterScreen(),
       ),
-      GoRoute(
-        path: AppRoutes.products,
-        builder: (context, state) => const ProductListScreen(),
-        routes: [
-          GoRoute(
-            path: 'new',
-            builder: (context, state) => const ProductFormScreen(),
-          ),
-          GoRoute(
-            path: ':id',
-            builder: (context, state) {
-              return ProductDetailScreen(
-                productId: state.pathParameters['id'] ?? '',
-              );
-            },
+
+      // ── Role-aware shell (fixed branches 0–4) ───────────────────
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return AppShell(navigationShell: navigationShell);
+        },
+        branches: [
+          // 0 — products list only
+          StatefulShellBranch(
             routes: [
               GoRoute(
-                path: 'edit',
-                builder: (context, state) {
-                  return ProductFormScreen(
-                    productId: state.pathParameters['id'] ?? '',
-                  );
-                },
+                path: AppRoutes.products,
+                builder: (context, state) => const ProductListScreen(),
+              ),
+            ],
+          ),
+          // 1 — cart
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.cart,
+                builder: (context, state) => const CartScreen(),
+              ),
+            ],
+          ),
+          // 2 — orders
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.orders,
+                builder: (context, state) => const OrderHistoryScreen(),
+              ),
+            ],
+          ),
+          // 3 — statistics
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.statistics,
+                builder: (context, state) => const StatisticsScreen(),
+              ),
+            ],
+          ),
+          // 4 — roles
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.roles,
+                builder: (context, state) => const RoleMatrixScreen(),
               ),
             ],
           ),
         ],
       ),
+
+      // ── Immersive root siblings (no shell chrome) ───────────────
+      // Order: new → :id/edit → :id (specificity)
       GoRoute(
-        path: AppRoutes.cart,
-        builder: (context, state) => const CartScreen(),
+        path: AppRoutes.newProduct,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const ProductFormScreen(),
       ),
       GoRoute(
-        path: AppRoutes.orders,
-        builder: (context, state) => const OrderHistoryScreen(),
+        path: AppRoutes.editProduct,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) {
+          return ProductFormScreen(
+            productId: state.pathParameters['id'] ?? '',
+          );
+        },
       ),
       GoRoute(
-        path: AppRoutes.statistics,
-        builder: (context, state) => const StatisticsScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.roles,
-        builder: (context, state) => const RoleMatrixScreen(),
+        path: AppRoutes.productDetail,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) {
+          return ProductDetailScreen(
+            productId: state.pathParameters['id'] ?? '',
+          );
+        },
       ),
     ],
     errorBuilder: (context, state) {

@@ -22,13 +22,6 @@ class StatisticsScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Báo cáo & Thống kê'),
-        actions: [
-          IconButton(
-            tooltip: 'Sản phẩm',
-            onPressed: () => context.go(AppRoutes.products),
-            icon: const Icon(Icons.storefront_outlined),
-          ),
-        ],
       ),
       body: Consumer<OrderController>(
         builder: (context, orders, _) {

@@ -45,26 +45,8 @@ class ProductListScreen extends StatelessWidget {
             Text(canManage ? 'Console Kho' : 'StoreFlow Mall'),
           ],
         ),
+        // Cross-links (roles/stats/orders/cart) live in AppShell tabs.
         actions: [
-          if (user?.canViewRoleMatrix ?? false)
-            IconButton(
-              tooltip: 'Ma trận quyền',
-              onPressed: () => context.go(AppRoutes.roles),
-              icon: const Icon(Icons.shield_outlined),
-            ),
-          if (user?.canViewRevenue ?? false)
-            IconButton(
-              tooltip: 'Doanh thu',
-              onPressed: () => context.go(AppRoutes.statistics),
-              icon: const Icon(Icons.analytics_outlined),
-            ),
-          if (user?.canShop ?? false)
-            IconButton(
-              tooltip: 'Đơn hàng',
-              onPressed: () => context.go(AppRoutes.orders),
-              icon: const Icon(Icons.local_shipping_outlined),
-            ),
-          if (user?.canShop ?? false) const _CartBadge(),
           _AccountMenu(),
         ],
       ),
@@ -741,69 +723,6 @@ class _GridTileState extends State<_GridTile> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _CartBadge extends StatelessWidget {
-  const _CartBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<CartController>(
-      builder: (context, cart, _) {
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            IconButton(
-              tooltip: 'Giỏ hàng',
-              onPressed: () => context.go(AppRoutes.cart),
-              icon: const Icon(Icons.shopping_bag_outlined),
-            ),
-            if (cart.totalQuantity > 0)
-              Positioned(
-                right: 2,
-                top: 2,
-                child: TweenAnimationBuilder<double>(
-                  key: ValueKey(cart.totalQuantity),
-                  tween: Tween(begin: 0.6, end: 1.0),
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.elasticOut,
-                  builder: (context, val, child) {
-                    return Transform.scale(scale: val, child: child);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 5,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.secondary,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.secondary.withValues(alpha: .35),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      cart.totalQuantity > 99 ? '99+' : '${cart.totalQuantity}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
     );
   }
 }
