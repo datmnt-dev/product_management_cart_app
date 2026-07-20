@@ -82,6 +82,7 @@ class OrderController extends ChangeNotifier {
     _watchOrdersForCurrentUser();
   }
 
+  /// Checkout: stock deduction + order create in **one** Firestore transaction.
   Future<OrderModel> checkout({
     required AppUser user,
     required List<CartItem> items,
@@ -97,9 +98,10 @@ class OrderController extends ChangeNotifier {
       );
     }).toList();
 
+    final email = user.email.trim().toLowerCase();
     final order = OrderModel(
       id: 'order-${now.microsecondsSinceEpoch}',
-      userEmail: user.email,
+      userEmail: email,
       items: orderItems,
       totalAmount: orderItems.fold<double>(
         0,
@@ -112,14 +114,20 @@ class OrderController extends ChangeNotifier {
         OrderStatusEvent(
           status: OrderStatus.placed,
           at: now,
-          byEmail: user.email,
+          byEmail: email,
           note: 'Khách đã gửi đơn hàng',
         ),
       ],
     );
 
-    await _database.saveOrder(order);
-    return order;
+    final quantities = {
+      for (final item in items) item.product.id: item.quantity,
+    };
+
+    return _database.placeOrderAtomic(
+      order: order,
+      quantitiesByProductId: quantities,
+    );
   }
 
   /// Staff or customer status transition with validation.
