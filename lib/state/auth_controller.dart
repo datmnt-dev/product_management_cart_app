@@ -141,6 +141,25 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateProfile({
+    required String fullName,
+    required String phone,
+    required String shopName,
+    required String bio,
+  }) async {
+    final current = _currentUser;
+    if (current == null) throw StateError('Vui lòng đăng nhập lại.');
+    final updated = current.copyWith(
+      fullName: fullName.trim(),
+      phone: phone.trim(),
+      shopName: shopName.trim(),
+      bio: bio.trim(),
+    );
+    await _database.saveUser(updated);
+    _currentUser = updated;
+    notifyListeners();
+  }
+
   Future<void> _persistSession({
     required AppUser user,
     required bool rememberMe,

@@ -10,6 +10,9 @@ class AppUser {
     required this.passwordHash,
     required this.role,
     required this.createdAt,
+    this.phone = '',
+    this.shopName = '',
+    this.bio = '',
   });
 
   final String id;
@@ -18,6 +21,9 @@ class AppUser {
   final String passwordHash;
   final AppRole role;
   final DateTime createdAt;
+  final String phone;
+  final String shopName;
+  final String bio;
 
   bool get canManageProducts => role.canManageProducts;
   bool get canDeleteProducts => role.canDeleteProducts;
@@ -26,6 +32,27 @@ class AppUser {
   bool get canManageOrders => role.canManageOrders;
   bool get isStaff => role.isStaff;
   bool get canViewRoleMatrix => role.canViewRoleMatrix;
+  bool get isSeller => role == AppRole.seller;
+  String get displayShopName =>
+      shopName.trim().isEmpty ? fullName : shopName.trim();
+
+  AppUser copyWith({
+    String? fullName,
+    String? phone,
+    String? shopName,
+    String? bio,
+    AppRole? role,
+  }) => AppUser(
+    id: id,
+    fullName: fullName ?? this.fullName,
+    email: email,
+    passwordHash: passwordHash,
+    role: role ?? this.role,
+    createdAt: createdAt,
+    phone: phone ?? this.phone,
+    shopName: shopName ?? this.shopName,
+    bio: bio ?? this.bio,
+  );
 
   Map<String, dynamic> toMap() {
     return {
@@ -35,6 +62,9 @@ class AppUser {
       'passwordHash': passwordHash,
       'role': role.key,
       'createdAt': createdAt.toIso8601String(),
+      'phone': phone,
+      'shopName': shopName,
+      'bio': bio,
     };
   }
 
@@ -46,6 +76,9 @@ class AppUser {
       passwordHash: map['passwordHash']?.toString() ?? '',
       role: AppRoleX.fromKey(map['role']?.toString()),
       createdAt: _dateFrom(map['createdAt']),
+      phone: map['phone']?.toString() ?? '',
+      shopName: map['shopName']?.toString() ?? '',
+      bio: map['bio']?.toString() ?? '',
     );
   }
 

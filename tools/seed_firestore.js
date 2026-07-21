@@ -43,6 +43,12 @@ const accounts = [
     role: "manager",
   },
   {
+    fullName: "Seller Demo",
+    email: "seller@store.local",
+    password: "123456",
+    role: "seller",
+  },
+  {
     fullName: "Customer Demo",
     email: "customer@store.local",
     password: "123456",
@@ -463,6 +469,7 @@ async function main() {
   }
 
   const admin = seededAccounts.find((account) => account.role === "admin");
+  const seller = seededAccounts.find((account) => account.role === "seller");
   if (!admin) {
     throw new Error("Admin account was not created.");
   }
@@ -475,13 +482,20 @@ async function main() {
       email: account.email,
       passwordHash: "",
       role: account.role,
+      shopName: account.role === "seller" ? "Seller Demo Shop" : "",
+      phone: account.role === "seller" ? "0900000001" : "",
+      bio: account.role === "seller" ? "Shop demo tự quản lý tồn kho và giao hàng." : "",
       createdAt: account.createdAt,
     });
   }
 
   console.log("Writing Firestore products...");
   for (const product of products) {
-    await writeDocument(`products/${product.id}`, admin.idToken, product);
+    await writeDocument(`products/${product.id}`, admin.idToken, {
+      ...product,
+      sellerId: seller?.uid ?? "",
+      sellerName: seller?.fullName ?? "",
+    });
   }
 
   console.log("Writing Firestore coupons...");

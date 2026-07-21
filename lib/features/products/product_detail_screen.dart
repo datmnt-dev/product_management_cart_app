@@ -303,6 +303,37 @@ class _DetailContent extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: AppSpacing.md),
+                  if (product.sellerName.trim().isNotEmpty) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: cs.secondaryContainer.withValues(alpha: .45),
+                        borderRadius: AppRadii.borderLg,
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.storefront_outlined, color: cs.secondary),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Người bán', style: tt.labelMedium),
+                                Text(
+                                  product.sellerName,
+                                  style: tt.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(AppSpacing.md),
