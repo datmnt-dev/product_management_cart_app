@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../core/utils/load_status.dart';
 import '../data/models/product_model.dart';
+import '../data/models/inventory_movement.dart';
 import '../data/models/user_role.dart';
 import '../data/services/firestore_database.dart';
 import 'auth_controller.dart';
@@ -166,6 +167,18 @@ class ProductController extends ChangeNotifier {
   Future<bool> reduceStock(Map<String, int> quantitiesByProductId) async {
     return _database.reduceStock(quantitiesByProductId);
   }
+
+  Future<void> adjustStock({
+    required Product product,
+    required int quantityDelta,
+    required InventoryMovementType type,
+    String note = '',
+  }) => _database.adjustStock(
+    product: product,
+    quantityDelta: quantityDelta,
+    type: type,
+    note: note,
+  );
 
   @override
   void dispose() {

@@ -79,6 +79,11 @@ service cloud.firestore {
         );
     }
 
+    match /inventoryMovements/{movementId} {
+      allow read, create: if isStaff();
+      allow update, delete: if false;
+    }
+
     match /orders/{orderId} {
       function orderOwnedByCaller() {
         return request.auth.token.email is string
