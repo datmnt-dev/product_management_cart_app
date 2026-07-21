@@ -361,6 +361,8 @@ class OrderLine {
     required this.quantity,
     required this.imageUrl,
     this.category = 'other',
+    this.sellerId = '',
+    this.sellerName = '',
   });
 
   final String productId;
@@ -371,6 +373,8 @@ class OrderLine {
 
   /// Snapshot category key at checkout (stable stats without product join).
   final String category;
+  final String sellerId;
+  final String sellerName;
 
   double get totalPrice => unitPrice * quantity;
 
@@ -382,6 +386,8 @@ class OrderLine {
       'quantity': quantity,
       'imageUrl': imageUrl,
       'category': category,
+      'sellerId': sellerId,
+      'sellerName': sellerName,
     };
   }
 
@@ -399,6 +405,8 @@ class OrderLine {
           0,
       imageUrl: map['imageUrl']?.toString() ?? '',
       category: map['category']?.toString() ?? 'other',
+      sellerId: map['sellerId']?.toString() ?? '',
+      sellerName: map['sellerName']?.toString() ?? '',
     );
   }
 }

@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../models/coupon_model.dart';
 import '../models/inventory_movement.dart';
 import '../models/order_model.dart';
+import '../models/seller_fulfillment.dart';
 import '../models/product_model.dart';
 import '../models/user_model.dart';
 import '../models/user_role.dart';
@@ -34,6 +35,8 @@ class FirestoreDatabase {
       _firestore.collection('coupons');
   CollectionReference<Map<String, dynamic>> get _inventoryMovements =>
       _firestore.collection('inventoryMovements');
+  CollectionReference<Map<String, dynamic>> get _sellerFulfillments =>
+      _firestore.collection('sellerFulfillments');
 
   User? get firebaseUser => _auth.currentUser;
 
@@ -428,6 +431,8 @@ class FirestoreDatabase {
             quantity: entry.value,
             imageUrl: product.imageUrl,
             category: product.category.key,
+            sellerId: product.sellerId,
+            sellerName: product.sellerName,
           ),
         );
         transaction.update(ref, {
@@ -473,6 +478,35 @@ class FirestoreDatabase {
         totalAmount: liveTotal.toDouble(),
       );
       transaction.set(orderRef, committedOrder.toMap());
+
+      final linesBySeller = <String, List<OrderLine>>{};
+      for (final line in liveLines) {
+        if (line.sellerId.isEmpty) continue;
+        (linesBySeller[line.sellerId] ??= []).add(line);
+      }
+      for (final entry in linesBySeller.entries) {
+        final fulfillmentRef = _sellerFulfillments.doc(
+          '${normalized.id}_${entry.key}',
+        );
+        final first = entry.value.first;
+        transaction.set(
+          fulfillmentRef,
+          SellerFulfillment(
+            id: fulfillmentRef.id,
+            orderId: normalized.id,
+            sellerId: entry.key,
+            sellerName: first.sellerName,
+            customerEmail: authEmail,
+            customerName: normalized.customerName,
+            phone: normalized.phone,
+            shippingAddress: normalized.shippingAddress,
+            items: entry.value,
+            status: OrderStatus.placed,
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ).toMap(),
+        );
+      }
     });
 
     return committedOrder;
@@ -561,6 +595,34 @@ class FirestoreDatabase {
     });
 
     return committedOrder;
+  }
+
+  Stream<List<SellerFulfillment>> watchSellerFulfillments(String sellerId) =>
+      _sellerFulfillments
+          .where('sellerId', isEqualTo: sellerId)
+          .snapshots()
+          .map((snapshot) {
+            final values = snapshot.docs
+                .map(
+                  (doc) =>
+                      SellerFulfillment.fromMap({'id': doc.id, ...doc.data()}),
+                )
+                .toList();
+            values.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            return values;
+          });
+
+  Future<void> updateSellerFulfillmentStatus({
+    required SellerFulfillment fulfillment,
+    required OrderStatus next,
+  }) async {
+    if (next != fulfillment.status.nextStaffStatus) {
+      throw StateError('Chuyển trạng thái giao hàng không hợp lệ.');
+    }
+    await _sellerFulfillments.doc(fulfillment.id).update({
+      'status': next.key,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   Stream<List<OrderModel>> watchOrders({String? userEmail}) {
