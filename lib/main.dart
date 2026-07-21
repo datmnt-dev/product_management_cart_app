@@ -8,6 +8,7 @@ import 'data/services/firestore_database.dart';
 import 'firebase_options.dart';
 import 'state/auth_controller.dart';
 import 'state/cart_controller.dart';
+import 'state/order_alert_controller.dart';
 import 'state/order_controller.dart';
 import 'state/product_controller.dart';
 
@@ -29,7 +30,13 @@ Future<void> main() async {
   final productController = ProductController(database, authController);
   final orderController = OrderController(database, authController);
 
-  // Keep cart hydrated with live catalog + current user.
+  // Direct construction — never create OrderAlert via context.read in Provider.create.
+  final alertController = OrderAlertController(
+    authController: authController,
+    orderController: orderController,
+    preferences: preferences,
+  );
+
   void syncCart() {
     final email = authController.currentUser?.email;
     if (email == null) {
@@ -54,11 +61,11 @@ Future<void> main() async {
         ),
         ChangeNotifierProvider<CartController>.value(value: cartController),
         ChangeNotifierProvider<OrderController>.value(value: orderController),
+        ChangeNotifierProvider<OrderAlertController>.value(
+          value: alertController,
+        ),
       ],
-      // Child context can read all providers above.
-      builder: (context, _) {
-        return ProductLabApp(authController: authController);
-      },
+      child: ProductLabApp(authController: authController),
     ),
   );
 }

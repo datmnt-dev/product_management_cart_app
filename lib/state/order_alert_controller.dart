@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/models/order_model.dart';
@@ -34,7 +35,12 @@ class OrderAlertController extends ChangeNotifier {
        _prefs = preferences {
     _auth.addListener(_onAuthChanged);
     _orders.addListener(_onOrdersChanged);
-    _onAuthChanged();
+    // Never notifyListeners() synchronously in the constructor — Provider
+    // create is still running and reassemble/hot-reload will crash.
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (_disposed) return;
+      _onAuthChanged();
+    });
   }
 
   final AuthController _auth;
@@ -45,6 +51,7 @@ class OrderAlertController extends ChangeNotifier {
   Map<String, String> _lastSeen = {};
   bool _bootstrapped = false;
   int _unread = 0;
+  bool _disposed = false;
 
   List<OrderAlert> get alerts => List.unmodifiable(_alerts);
   int get unreadCount => _unread;
@@ -53,18 +60,20 @@ class OrderAlertController extends ChangeNotifier {
   OrderAlert? get latest => _alerts.isEmpty ? null : _alerts.first;
 
   void markAllRead() {
+    if (_disposed) return;
     _unread = 0;
     notifyListeners();
   }
 
   void dismissLatest() {
-    if (_alerts.isEmpty) return;
+    if (_disposed || _alerts.isEmpty) return;
     _alerts.removeAt(0);
     if (_unread > 0) _unread--;
     notifyListeners();
   }
 
   void _onAuthChanged() {
+    if (_disposed) return;
     final email = _auth.currentUser?.email.trim().toLowerCase();
     _bootstrapped = false;
     _alerts.clear();
@@ -74,10 +83,10 @@ class OrderAlertController extends ChangeNotifier {
       _loadSeen(email);
     }
     notifyListeners();
-    // Wait for next order snapshot to bootstrap baseline.
   }
 
   void _onOrdersChanged() {
+    if (_disposed) return;
     final user = _auth.currentUser;
     if (user == null || !user.canShop) return;
     if (_orders.orders.isEmpty && !_bootstrapped) return;
@@ -98,7 +107,6 @@ class OrderAlertController extends ChangeNotifier {
     for (final o in mine) {
       final prev = _lastSeen[o.id];
       if (prev == null) {
-        // New order placed by this customer.
         _lastSeen[o.id] = o.status.key;
         _pushAlert(
           OrderAlert(
@@ -155,11 +163,14 @@ class OrderAlertController extends ChangeNotifier {
   }
 
   void _saveSeen(String email) {
-    _prefs.setString(_seenKey(email), jsonEncode(_lastSeen));
+    try {
+      _prefs.setString(_seenKey(email), jsonEncode(_lastSeen));
+    } catch (_) {}
   }
 
   @override
   void dispose() {
+    _disposed = true;
     _auth.removeListener(_onAuthChanged);
     _orders.removeListener(_onOrdersChanged);
     super.dispose();
