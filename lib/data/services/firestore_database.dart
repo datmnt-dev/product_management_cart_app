@@ -207,6 +207,16 @@ class FirestoreDatabase {
     await _products.doc(id).delete();
   }
 
+  Stream<List<Coupon>> watchCoupons() => _coupons.snapshots().map((snapshot) {
+    final items = snapshot.docs
+        .map((doc) => Coupon.fromMap({'code': doc.id, ...doc.data()}))
+        .toList();
+    items.sort((a, b) => a.expiresAt.compareTo(b.expiresAt));
+    return items;
+  });
+  Future<void> saveCoupon(Coupon coupon) =>
+      _coupons.doc(Coupon.normalizeCode(coupon.code)).set(coupon.toMap());
+
   Stream<List<InventoryMovement>> watchInventoryMovements(String productId) =>
       _inventoryMovements
           .where('productId', isEqualTo: productId)

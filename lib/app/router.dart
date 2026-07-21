@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/cart/cart_screen.dart';
+import '../features/coupons/coupon_management_screen.dart';
 import '../features/orders/order_history_screen.dart';
 import '../features/products/product_detail_screen.dart';
 import '../features/products/product_form_screen.dart';
@@ -26,6 +27,7 @@ class AppRoutes {
   static const orders = '/orders';
   static const statistics = '/statistics';
   static const roles = '/roles';
+  static const coupons = '/coupons';
 
   static String productDetails(String id) => '/products/$id';
 
@@ -75,11 +77,19 @@ GoRouter buildAppRouter(AuthController authController) {
         if (path == AppRoutes.roles && !user.canViewRoleMatrix) {
           return AppRoutes.products;
         }
+        if (path == AppRoutes.coupons && !user.canManageProducts) {
+          return AppRoutes.products;
+        }
       }
 
       return null;
     },
     routes: [
+      GoRoute(
+        path: AppRoutes.coupons,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const CouponManagementScreen(),
+      ),
       GoRoute(
         path: AppRoutes.login,
         builder: (context, state) => const LoginScreen(),
