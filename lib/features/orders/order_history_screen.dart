@@ -81,56 +81,63 @@ class _CustomerOrderHistory extends StatelessWidget {
               ? allMine
               : allMine.where((o) => o.status == statusFilter).toList();
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.xs,
-              AppSpacing.md,
-              AppSpacing.xxxl,
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 900),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.xs,
+                  AppSpacing.md,
+                  AppSpacing.xxxl,
+                ),
+                children: [
+                  _CustomerSummary(orders: allMine),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Lọc theo trạng thái',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  _StatusFilterBar(
+                    selected: statusFilter,
+                    counts: {
+                      for (final s in OrderStatus.values)
+                        s: allMine.where((o) => o.status == s).length,
+                    },
+                    onSelected: controller.setStatusFilter,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'Đơn của tôi (${orders.length})',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  if (orders.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: EmptyState(
+                        icon: Icons.filter_alt_off_outlined,
+                        title: 'Không có đơn phù hợp',
+                        message:
+                            'Thử đổi bộ lọc trạng thái để xem các đơn khác.',
+                      ),
+                    )
+                  else
+                    ...orders.map(
+                      (o) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: OrderExpandableTile(order: o),
+                      ),
+                    ),
+                ],
+              ),
             ),
-            children: [
-              _CustomerSummary(orders: allMine),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Lọc theo trạng thái',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 8),
-              _StatusFilterBar(
-                selected: statusFilter,
-                counts: {
-                  for (final s in OrderStatus.values)
-                    s: allMine.where((o) => o.status == s).length,
-                },
-                onSelected: controller.setStatusFilter,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                'Đơn của tôi (${orders.length})',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              if (orders.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: EmptyState(
-                    icon: Icons.filter_alt_off_outlined,
-                    title: 'Không có đơn phù hợp',
-                    message: 'Thử đổi bộ lọc trạng thái để xem các đơn khác.',
-                  ),
-                )
-              else
-                ...orders.map(
-                  (o) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: OrderExpandableTile(order: o),
-                  ),
-                ),
-            ],
           );
         },
       ),
@@ -262,145 +269,157 @@ class _StaffOrderBoardState extends State<_StaffOrderBoard> {
           final list = controller.ordersByStatus(selected, query: _query);
           final inbox = controller.countByStatus(OrderStatus.placed);
 
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.xs,
-                  AppSpacing.md,
-                  AppSpacing.xs,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    if (inbox > 0)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: cs.tertiaryContainer.withValues(alpha: .55),
-                          borderRadius: AppRadii.borderMd,
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.mark_email_unread_outlined,
-                              color: cs.onTertiaryContainer,
-                              size: 18,
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1000),
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      AppSpacing.xs,
+                      AppSpacing.md,
+                      AppSpacing.xs,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (inbox > 0)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
                             ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                '$inbox đơn mới chờ xác nhận',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
+                            decoration: BoxDecoration(
+                              color: cs.tertiaryContainer.withValues(alpha: .55),
+                              borderRadius: AppRadii.borderMd,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.mark_email_unread_outlined,
                                   color: cs.onTertiaryContainer,
+                                  size: 18,
                                 ),
-                              ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '$inbox đơn mới chờ xác nhận',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: cs.onTertiaryContainer,
+                                    ),
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () => controller.setStatusFilter(
+                                    OrderStatus.placed,
+                                  ),
+                                  child: const Text('Xem'),
+                                ),
+                              ],
                             ),
-                            TextButton(
-                              onPressed: () => controller.setStatusFilter(
-                                OrderStatus.placed,
-                              ),
-                              child: const Text('Xem'),
-                            ),
-                          ],
+                          ),
+                        TextField(
+                          controller: _search,
+                          onChanged: (v) => setState(() => _query = v),
+                          decoration: InputDecoration(
+                            hintText: 'Tìm mã đơn, email, SĐT, tên...',
+                            isDense: true,
+                            prefixIcon: const Icon(Icons.search),
+                            suffixIcon: _query.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 20),
+                                    onPressed: () {
+                                      _search.clear();
+                                      setState(() => _query = '');
+                                    },
+                                  )
+                                : null,
+                          ),
                         ),
-                      ),
-                    TextField(
-                      controller: _search,
-                      onChanged: (v) => setState(() => _query = v),
-                      decoration: InputDecoration(
-                        hintText: 'Tìm mã đơn, email, SĐT, tên...',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: _query.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 20),
-                                onPressed: () {
-                                  _search.clear();
-                                  setState(() => _query = '');
-                                },
-                              )
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    _StatusFilterBar(
-                      selected: selected,
-                      counts: {
-                        for (final s in OrderStatus.values)
-                          s: controller.countByStatus(s),
-                      },
-                      onSelected: controller.setStatusFilter,
-                      showAllCount: controller.orders.length,
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  0,
-                  AppSpacing.md,
-                  AppSpacing.xs,
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      selected == null
-                          ? 'Tất cả đơn (${list.length})'
-                          : '${selected.shortLabel} (${list.length})',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      formatCurrency(
-                        list
-                            .where((o) => o.status.countsTowardRevenue)
-                            .fold<double>(0, (s, o) => s + o.totalAmount),
-                      ),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        color: cs.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: list.isEmpty
-                    ? const EmptyState(
-                        icon: Icons.filter_alt_off_outlined,
-                        title: 'Không có đơn phù hợp',
-                        message:
-                            'Thử đổi cột trạng thái hoặc từ khóa tìm kiếm.',
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.md,
-                          0,
-                          AppSpacing.md,
-                          AppSpacing.xxxl,
+                        const SizedBox(height: AppSpacing.sm),
+                        _StatusFilterBar(
+                          selected: selected,
+                          counts: {
+                            for (final s in OrderStatus.values)
+                              s: controller.countByStatus(s),
+                          },
+                          onSelected: controller.setStatusFilter,
+                          showAllCount: controller.orders.length,
                         ),
-                        itemCount: list.length,
-                        itemBuilder: (context, i) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: OrderExpandableTile(
-                              order: list[i],
-                              showCustomerEmail: true,
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.md,
+                      0,
+                      AppSpacing.md,
+                      AppSpacing.xs,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            selected == null
+                                ? 'Tất cả đơn (${list.length})'
+                                : '${selected.shortLabel} (${list.length})',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w900),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          formatCurrency(
+                            list
+                                .where((o) => o.status.countsTowardRevenue)
+                                .fold<double>(0, (s, o) => s + o.totalAmount),
+                          ),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: cs.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: list.isEmpty
+                        ? const EmptyState(
+                            icon: Icons.filter_alt_off_outlined,
+                            title: 'Không có đơn phù hợp',
+                            message:
+                                'Thử đổi cột trạng thái hoặc từ khóa tìm kiếm.',
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.md,
+                              0,
+                              AppSpacing.md,
+                              AppSpacing.xxxl,
                             ),
-                          );
-                        },
-                      ),
+                            itemCount: list.length,
+                            itemBuilder: (context, i) {
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 12),
+                                child: OrderExpandableTile(
+                                  order: list[i],
+                                  showCustomerEmail: true,
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
               ),
-            ],
+            ),
           );
         },
       ),

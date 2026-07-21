@@ -68,6 +68,7 @@ class _CartScreenState extends State<CartScreen> {
           ),
         ],
       ),
+      // Checkout bar lives in body (Column) so it stacks cleanly above shell nav.
       body: Consumer<CartController>(
         builder: (context, cart, _) {
           if (cart.isEmpty) {
@@ -84,79 +85,89 @@ class _CartScreenState extends State<CartScreen> {
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.xs,
-              AppSpacing.md,
-              140,
-            ),
-            itemCount: cart.items.length,
-            itemBuilder: (context, i) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _CartTile(item: cart.items[i]),
-            ),
-          );
-        },
-      ),
-      bottomNavigationBar: Consumer<CartController>(
-        builder: (context, cart, _) {
-          if (cart.isEmpty) return const SizedBox.shrink();
-
-          return PrimaryBottomBar(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.xs,
+                        AppSpacing.md,
+                        AppSpacing.md,
+                      ),
+                      itemCount: cart.items.length,
+                      itemBuilder: (context, i) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _CartTile(item: cart.items[i]),
+                      ),
+                    ),
+                  ),
+                  PrimaryBottomBar(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'TỔNG CỘNG',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            color: cs.onSurfaceVariant,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'TỔNG CỘNG',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    color: cs.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${cart.totalQuantity} sản phẩm',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: cs.onSurfaceVariant,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            PriceText(cart.totalPrice, fontSize: 20),
+                          ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${cart.totalQuantity} sản phẩm',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: cs.onSurfaceVariant,
-                            fontWeight: FontWeight.w800,
+                        const SizedBox(height: AppSpacing.sm),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed:
+                                _checkingOut ? null : () => _checkout(context),
+                            child: _checkingOut
+                                ? SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: cs.onPrimary,
+                                    ),
+                                  )
+                                : const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.shopping_cart_checkout),
+                                      SizedBox(width: 8),
+                                      Text('Đặt hàng ngay'),
+                                    ],
+                                  ),
                           ),
                         ),
                       ],
                     ),
-                    PriceText(cart.totalPrice, fontSize: 20),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                FilledButton(
-                  onPressed: _checkingOut ? null : () => _checkout(context),
-                  child: _checkingOut
-                      ? SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: cs.onPrimary,
-                          ),
-                        )
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.shopping_cart_checkout),
-                            SizedBox(width: 8),
-                            Text('Đặt hàng ngay'),
-                          ],
-                        ),
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           );
         },

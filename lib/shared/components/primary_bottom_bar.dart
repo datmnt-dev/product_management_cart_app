@@ -31,12 +31,14 @@ class PrimaryBottomBar extends StatelessWidget {
             ),
           ],
         ),
+        // bottom: false — shell NavigationBar already owns bottom safe inset.
         child: SafeArea(
+          bottom: false,
           minimum: const EdgeInsets.fromLTRB(
             AppSpacing.md,
             AppSpacing.sm,
             AppSpacing.md,
-            AppSpacing.md,
+            AppSpacing.sm,
           ),
           child: child,
         ),

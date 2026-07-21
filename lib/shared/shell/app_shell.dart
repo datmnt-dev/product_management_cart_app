@@ -12,30 +12,82 @@ import '../../state/order_controller.dart';
 import 'shell_destinations.dart';
 
 /// Outer shell: tab chrome only. Branch screens keep nested Scaffolds.
-class AppShell extends StatefulWidget {
+class AppShell extends StatelessWidget {
   const AppShell({required this.navigationShell, super.key});
 
   final StatefulNavigationShell navigationShell;
 
-  static const double _railBreakpoint = 600;
+  /// Prefer bottom nav on phone/tablet portrait; rail on desktop web.
+  static const double _railBreakpoint = 840;
 
   @override
-  State<AppShell> createState() => _AppShellState();
+  Widget build(BuildContext context) {
+    final user = context.watch<AuthController>().currentUser;
+    if (user == null) {
+      return const Scaffold(body: SizedBox.shrink());
+    }
+
+    // Snackbars for status changes (optional if provider missing mid-reload).
+    return _OrderAlertSnackHost(
+      navigationShell: navigationShell,
+      child: _ShellChrome(
+        navigationShell: navigationShell,
+        user: user,
+      ),
+    );
+  }
 }
 
-class _AppShellState extends State<AppShell> {
+/// Listens for new order alerts and shows a floating SnackBar.
+class _OrderAlertSnackHost extends StatefulWidget {
+  const _OrderAlertSnackHost({
+    required this.navigationShell,
+    required this.child,
+  });
+
+  final StatefulNavigationShell navigationShell;
+  final Widget child;
+
+  @override
+  State<_OrderAlertSnackHost> createState() => _OrderAlertSnackHostState();
+}
+
+class _OrderAlertSnackHostState extends State<_OrderAlertSnackHost> {
   OrderAlertController? _alerts;
   int _lastUnread = 0;
+  var _attached = false;
+
+  OrderAlertController? _tryRead(BuildContext context) {
+    try {
+      return Provider.of<OrderAlertController>(context, listen: false);
+    } catch (_) {
+      return null;
+    }
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final alerts = context.read<OrderAlertController>();
-    if (!identical(_alerts, alerts)) {
-      _alerts?.removeListener(_onAlerts);
-      _alerts = alerts;
-      _alerts!.addListener(_onAlerts);
+    final alerts = _tryRead(context);
+    if (alerts == null) {
+      _detach();
+      return;
     }
+    if (!identical(_alerts, alerts)) {
+      _detach();
+      _alerts = alerts;
+      _lastUnread = alerts.unreadCount;
+      _alerts!.addListener(_onAlerts);
+      _attached = true;
+    }
+  }
+
+  void _detach() {
+    if (_attached && _alerts != null) {
+      _alerts!.removeListener(_onAlerts);
+    }
+    _alerts = null;
+    _attached = false;
   }
 
   void _onAlerts() {
@@ -62,20 +114,28 @@ class _AppShellState extends State<AppShell> {
 
   @override
   void dispose() {
-    _alerts?.removeListener(_onAlerts);
+    _detach();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
-    final user = context.watch<AuthController>().currentUser;
-    if (user == null) {
-      return const Scaffold(body: SizedBox.shrink());
-    }
+  Widget build(BuildContext context) => widget.child;
+}
 
+class _ShellChrome extends StatelessWidget {
+  const _ShellChrome({
+    required this.navigationShell,
+    required this.user,
+  });
+
+  final StatefulNavigationShell navigationShell;
+  final AppUser user;
+
+  @override
+  Widget build(BuildContext context) {
     final visible = destinationsFor(user);
     var selected = visible.indexWhere(
-      (d) => d.branchIndex == widget.navigationShell.currentIndex,
+      (d) => d.branchIndex == navigationShell.currentIndex,
     );
     if (selected < 0) {
       selected = 0;
@@ -84,13 +144,27 @@ class _AppShellState extends State<AppShell> {
     final width = MediaQuery.sizeOf(context).width;
     final useRail = width >= AppShell._railBreakpoint;
 
+    void onSelect(int visibleIndex) {
+      HapticFeedback.selectionClick();
+      final dest = visible[visibleIndex];
+      if (dest.branchIndex == ShellBranches.orders) {
+        try {
+          context.read<OrderAlertController>().markAllRead();
+        } catch (_) {}
+      }
+      navigationShell.goBranch(
+        dest.branchIndex,
+        initialLocation: visibleIndex == selected,
+      );
+    }
+
     if (useRail) {
       return Scaffold(
         body: Row(
           children: [
             NavigationRail(
               selectedIndex: selected,
-              onDestinationSelected: (i) => _onSelect(i, visible, selected),
+              onDestinationSelected: onSelect,
               labelType: width >= 1024
                   ? NavigationRailLabelType.all
                   : NavigationRailLabelType.selected,
@@ -104,17 +178,17 @@ class _AppShellState extends State<AppShell> {
               ],
             ),
             const VerticalDivider(width: 1),
-            Expanded(child: widget.navigationShell),
+            Expanded(child: navigationShell),
           ],
         ),
       );
     }
 
     return Scaffold(
-      body: widget.navigationShell,
+      body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: selected,
-        onDestinationSelected: (i) => _onSelect(i, visible, selected),
+        onDestinationSelected: onSelect,
         destinations: [
           for (final d in visible)
             NavigationDestination(
@@ -124,22 +198,6 @@ class _AppShellState extends State<AppShell> {
             ),
         ],
       ),
-    );
-  }
-
-  void _onSelect(
-    int visibleIndex,
-    List<ShellDestination> visible,
-    int currentSelected,
-  ) {
-    HapticFeedback.selectionClick();
-    final dest = visible[visibleIndex];
-    if (dest.branchIndex == ShellBranches.orders) {
-      context.read<OrderAlertController>().markAllRead();
-    }
-    widget.navigationShell.goBranch(
-      dest.branchIndex,
-      initialLocation: visibleIndex == currentSelected,
     );
   }
 
@@ -164,14 +222,18 @@ class _AppShellState extends State<AppShell> {
     }
 
     if (d.branchIndex == ShellBranches.orders) {
-      return Consumer2<OrderAlertController, OrderController>(
-        builder: (context, alerts, orders, _) {
+      return Consumer<OrderController>(
+        builder: (context, orders, _) {
           final user = context.read<AuthController>().currentUser;
           var count = 0;
           if (user?.canManageOrders == true) {
             count = orders.countByStatus(OrderStatus.placed);
           } else {
-            count = alerts.unreadCount;
+            try {
+              count = context.read<OrderAlertController>().unreadCount;
+            } catch (_) {
+              count = 0;
+            }
           }
           if (count <= 0) return icon;
           return Badge(

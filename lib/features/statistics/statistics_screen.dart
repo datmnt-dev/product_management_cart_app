@@ -22,15 +22,24 @@ class StatisticsScreen extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
+    final narrow = MediaQuery.sizeOf(context).width < 480;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Báo cáo & Thống kê'),
         actions: [
-          TextButton.icon(
-            onPressed: () => context.go(AppRoutes.orders),
-            icon: const Icon(Icons.view_kanban_outlined, size: 18),
-            label: const Text('Bảng đơn'),
-          ),
+          if (narrow)
+            IconButton(
+              tooltip: 'Bảng đơn',
+              onPressed: () => context.go(AppRoutes.orders),
+              icon: const Icon(Icons.view_kanban_outlined),
+            )
+          else
+            TextButton.icon(
+              onPressed: () => context.go(AppRoutes.orders),
+              icon: const Icon(Icons.view_kanban_outlined, size: 18),
+              label: const Text('Bảng đơn'),
+            ),
         ],
       ),
       body: Consumer<OrderController>(
@@ -563,7 +572,7 @@ class _MiniMetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cs.surface,
         borderRadius: BorderRadius.circular(20),
@@ -580,9 +589,11 @@ class _MiniMetricCard extends StatelessWidget {
             ),
             child: Icon(icon, color: color, size: 16),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
             title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w800,
@@ -592,6 +603,8 @@ class _MiniMetricCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w900,

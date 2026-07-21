@@ -304,7 +304,7 @@ class _OrderActions extends StatelessWidget {
                     );
                   },
             icon: const Icon(Icons.cancel_outlined, size: 18),
-            label: const Text('Hủy đơn (shop)'),
+            label: const Text('Hủy đơn'),
           ),
         );
       }

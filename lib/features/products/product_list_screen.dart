@@ -44,7 +44,13 @@ class ProductListScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Text(canManage ? 'Console Kho' : 'StoreFlow Mall'),
+            Flexible(
+              child: Text(
+                canManage ? 'Console Kho' : 'StoreFlow Mall',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         actions: const [
@@ -60,21 +66,27 @@ class ProductListScreen extends StatelessWidget {
               foregroundColor: cs.onPrimary,
             )
           : null,
-      body: Column(
-        children: [
-          if (user != null) _CompactRoleStrip(user: user),
-          const _SearchTools(),
-          const CategoryChipBar(),
-          if (canManage) ...[
-            const SizedBox(height: AppSpacing.xs),
-            const StatusFilterChipBar(),
-            const SizedBox(height: AppSpacing.xs),
-          ] else
-            const SizedBox(height: AppSpacing.xs),
-          Expanded(
-            child: _ProductGrid(canManage: canManage, user: user),
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: Column(
+            children: [
+              if (user != null) _CompactRoleStrip(user: user),
+              const _SearchTools(),
+              const CategoryChipBar(),
+              if (canManage) ...[
+                const SizedBox(height: AppSpacing.xs),
+                const StatusFilterChipBar(),
+                const SizedBox(height: AppSpacing.xs),
+              ] else
+                const SizedBox(height: AppSpacing.xs),
+              Expanded(
+                child: _ProductGrid(canManage: canManage, user: user),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -182,12 +194,13 @@ class _SearchTools extends StatelessWidget {
   Widget build(BuildContext context) {
     final canManage =
         context.watch<AuthController>().currentUser?.canManageProducts ?? false;
+    final cs = Theme.of(context).colorScheme;
 
     return Consumer<ProductController>(
       builder: (context, ctrl, _) {
         return Material(
           elevation: 0,
-          color: Theme.of(context).colorScheme.surface,
+          color: cs.surface,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
@@ -196,11 +209,13 @@ class _SearchTools extends StatelessWidget {
               AppSpacing.xs,
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextField(
                   onChanged: ctrl.setSearchQuery,
                   decoration: InputDecoration(
                     hintText: 'Tìm tên, mô tả, SKU...',
+                    isDense: true,
                     prefixIcon: const Icon(Icons.search),
                     suffixIcon: ctrl.searchQuery.isNotEmpty
                         ? IconButton(
@@ -210,63 +225,53 @@ class _SearchTools extends StatelessWidget {
                         : null,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: SingleChildScrollView(
+                const SizedBox(height: AppSpacing.xs),
+                // Single horizontal strip — avoids SegmentedButton overflow on web.
+                SizedBox(
+                  height: 40,
+                  child: ListView(
                     scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        SegmentedButton<ProductSort>(
-                          selected: {ctrl.sort},
-                          onSelectionChanged: (s) => ctrl.setSort(s.first),
-                          segments: [
-                            const ButtonSegment(
-                              value: ProductSort.newest,
-                              icon: Icon(Icons.watch_later_outlined, size: 15),
-                              label: Text('Mới'),
-                            ),
-                            const ButtonSegment(
-                              value: ProductSort.priceAsc,
-                              icon: Icon(Icons.trending_up, size: 15),
-                              label: Text('Giá ↑'),
-                            ),
-                            const ButtonSegment(
-                              value: ProductSort.priceDesc,
-                              icon: Icon(Icons.trending_down, size: 15),
-                              label: Text('Giá ↓'),
-                            ),
-                            if (canManage)
-                              const ButtonSegment(
-                                value: ProductSort.stockDesc,
-                                icon: Icon(Icons.inventory_2_outlined, size: 15),
-                                label: Text('Tồn'),
-                              ),
-                          ],
+                    children: [
+                      for (final entry in <(ProductSort, String, IconData)>[
+                        (ProductSort.newest, 'Mới', Icons.watch_later_outlined),
+                        (ProductSort.priceAsc, 'Giá ↑', Icons.trending_up),
+                        (ProductSort.priceDesc, 'Giá ↓', Icons.trending_down),
+                        if (canManage)
+                          (
+                            ProductSort.stockDesc,
+                            'Tồn',
+                            Icons.inventory_2_outlined,
+                          ),
+                      ])
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ChoiceChip(
+                            label: Text(entry.$2),
+                            avatar: Icon(entry.$3, size: 16),
+                            selected: ctrl.sort == entry.$1,
+                            onSelected: (_) => ctrl.setSort(entry.$1),
+                            showCheckmark: false,
+                            visualDensity: VisualDensity.compact,
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        FilterChip(
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: FilterChip(
                           label: const Text('Còn hàng'),
                           selected: ctrl.inStockOnly,
                           onSelected: ctrl.setInStockOnly,
-                          avatar: Icon(
-                            Icons.check_circle_outline,
-                            size: 16,
-                            color: ctrl.inStockOnly
-                                ? Theme.of(context).colorScheme.primary
-                                : null,
-                          ),
+                          showCheckmark: false,
+                          visualDensity: VisualDensity.compact,
                         ),
-                        if (ctrl.hasActiveFilters) ...[
-                          const SizedBox(width: 8),
-                          ActionChip(
-                            label: const Text('Xóa bộ lọc'),
-                            avatar: const Icon(Icons.filter_alt_off, size: 16),
-                            onPressed: ctrl.clearFilters,
-                          ),
-                        ],
-                      ],
-                    ),
+                      ),
+                      if (ctrl.hasActiveFilters)
+                        ActionChip(
+                          label: const Text('Xóa lọc'),
+                          avatar: const Icon(Icons.filter_alt_off, size: 16),
+                          onPressed: ctrl.clearFilters,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                    ],
                   ),
                 ),
               ],
@@ -285,75 +290,96 @@ class _ProductGrid extends StatelessWidget {
   final AppUser? user;
 
   static int columnsForWidth(double width) {
-    if (width >= 900) return 4;
-    if (width >= 600) return 3;
+    // Content is often inset by NavigationRail (~88px) on wide web.
+    if (width >= 1100) return 4;
+    if (width >= 720) return 3;
     return 2;
+  }
+
+  /// Taller cards on narrow columns tend to overflow footer text/actions.
+  static double aspectFor(int columns) {
+    switch (columns) {
+      case 4:
+        return 0.72;
+      case 3:
+        return 0.70;
+      default:
+        return 0.68;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final crossAxisCount = columnsForWidth(width);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final crossAxisCount = columnsForWidth(width);
+        final aspect = aspectFor(crossAxisCount);
 
-    return Consumer<ProductController>(
-      builder: (context, ctrl, _) {
-        if (ctrl.status == LoadStatus.loading && ctrl.products.isEmpty) {
-          return ProductGridSkeleton(crossAxisCount: crossAxisCount);
-        }
+        return Consumer<ProductController>(
+          builder: (context, ctrl, _) {
+            if (ctrl.status == LoadStatus.loading && ctrl.products.isEmpty) {
+              return ProductGridSkeleton(crossAxisCount: crossAxisCount);
+            }
 
-        if (ctrl.hasError && ctrl.products.isEmpty) {
-          return AppErrorState(
-            title: 'Không tải được sản phẩm',
-            message:
-                ctrl.errorMessage ??
-                'Không thể tải sản phẩm. Kiểm tra kết nối mạng và thử lại.',
-            onRetry: ctrl.retry,
-          );
-        }
+            if (ctrl.hasError && ctrl.products.isEmpty) {
+              return AppErrorState(
+                title: 'Không tải được sản phẩm',
+                message:
+                    ctrl.errorMessage ??
+                    'Không thể tải sản phẩm. Kiểm tra kết nối mạng và thử lại.',
+                onRetry: ctrl.retry,
+              );
+            }
 
-        final filteredList = ctrl.visibleProducts;
+            final filteredList = ctrl.visibleProducts;
 
-        if (filteredList.isEmpty) {
-          return EmptyState(
-            icon: Icons.grid_view_rounded,
-            title: 'Sản phẩm trống',
-            message: ctrl.searchQuery.isEmpty
-                ? 'Không có sản phẩm nào thuộc danh mục này.'
-                : 'Không có sản phẩm nào khớp với từ khóa tìm kiếm.',
-            action: canManage
-                ? FilledButton.icon(
-                    onPressed: () => context.go(AppRoutes.newProduct),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Thêm sản phẩm'),
-                  )
-                : null,
-          );
-        }
+            if (filteredList.isEmpty) {
+              return EmptyState(
+                icon: Icons.grid_view_rounded,
+                title: 'Sản phẩm trống',
+                message: ctrl.searchQuery.isEmpty
+                    ? 'Không có sản phẩm nào thuộc danh mục này.'
+                    : 'Không có sản phẩm nào khớp với từ khóa tìm kiếm.',
+                action: canManage
+                    ? FilledButton.icon(
+                        onPressed: () => context.go(AppRoutes.newProduct),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Thêm sản phẩm'),
+                      )
+                    : TextButton(
+                        onPressed: ctrl.clearFilters,
+                        child: const Text('Xóa bộ lọc'),
+                      ),
+              );
+            }
 
-        return GridView.builder(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.xxs,
-            AppSpacing.md,
-            AppSpacing.xxxl + AppSpacing.md,
-          ),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            mainAxisSpacing: 14,
-            crossAxisSpacing: 14,
-            childAspectRatio: 0.65,
-          ),
-          itemCount: filteredList.length,
-          itemBuilder: (context, index) {
-            final product = filteredList[index];
-            return _AnimatedEntrance(
-              index: index,
-              child: ProductCard(
-                product: product,
-                canManage: user?.canManageProducts ?? false,
-                canDelete: user?.canDeleteProducts ?? false,
-                canShop: user?.canShop ?? false,
+            return GridView.builder(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.xxs,
+                AppSpacing.md,
+                AppSpacing.xxxl + AppSpacing.md,
               ),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                childAspectRatio: aspect,
+              ),
+              itemCount: filteredList.length,
+              itemBuilder: (context, index) {
+                final product = filteredList[index];
+                return _AnimatedEntrance(
+                  index: index,
+                  child: ProductCard(
+                    product: product,
+                    canManage: user?.canManageProducts ?? false,
+                    canDelete: user?.canDeleteProducts ?? false,
+                    canShop: user?.canShop ?? false,
+                  ),
+                );
+              },
             );
           },
         );

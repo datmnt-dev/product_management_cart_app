@@ -8,7 +8,6 @@ import 'data/services/firestore_database.dart';
 import 'firebase_options.dart';
 import 'state/auth_controller.dart';
 import 'state/cart_controller.dart';
-import 'state/order_alert_controller.dart';
 import 'state/order_controller.dart';
 import 'state/product_controller.dart';
 
@@ -44,27 +43,22 @@ Future<void> main() async {
   productController.addListener(syncCart);
   syncCart();
 
-  final alertController = OrderAlertController(
-    authController: authController,
-    orderController: orderController,
-    preferences: preferences,
-  );
-
   runApp(
     MultiProvider(
       providers: [
         Provider<FirestoreDatabase>.value(value: database),
+        Provider<SharedPreferences>.value(value: preferences),
         ChangeNotifierProvider<AuthController>.value(value: authController),
         ChangeNotifierProvider<ProductController>.value(
           value: productController,
         ),
         ChangeNotifierProvider<CartController>.value(value: cartController),
         ChangeNotifierProvider<OrderController>.value(value: orderController),
-        ChangeNotifierProvider<OrderAlertController>.value(
-          value: alertController,
-        ),
       ],
-      child: ProductLabApp(authController: authController),
+      // Child context can read all providers above.
+      builder: (context, _) {
+        return ProductLabApp(authController: authController);
+      },
     ),
   );
 }

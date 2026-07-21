@@ -34,7 +34,7 @@ void main() {
         ShellBranches.statistics,
       ]);
       expect(dests.length, 3);
-      expect(dests[1].label, 'Bảng đơn');
+      expect(dests[1].label, 'Đơn');
     });
 
     test('admin has store, order board, statistics, roles (4 tabs)', () {

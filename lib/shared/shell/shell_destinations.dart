@@ -46,9 +46,10 @@ List<ShellDestination> destinationsFor(AppUser user) {
         selectedIcon: Icons.shopping_bag,
       ),
     if (user.canShop || user.canManageOrders)
-      ShellDestination(
+      const ShellDestination(
         branchIndex: ShellBranches.orders,
-        label: user.canManageOrders ? 'Bảng đơn' : 'Đơn',
+        // Keep short for NavigationBar (4 tabs on admin); screen title is longer.
+        label: 'Đơn',
         icon: Icons.receipt_long_outlined,
         selectedIcon: Icons.receipt_long,
       ),
