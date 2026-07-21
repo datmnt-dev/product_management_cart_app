@@ -5,7 +5,7 @@ import 'package:product_management_cart_app/data/models/coupon_model.dart';
 import 'package:product_management_cart_app/features/cart/cart_screen.dart';
 
 void main() {
-  testWidgets('checkout coupon row renders without infinite button width', (
+  testWidgets('checkout sheet renders without infinite button width', (
     tester,
   ) async {
     await tester.binding.setSurfaceSize(const Size(390, 760));
@@ -42,5 +42,13 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text('Mã giảm giá'), findsOneWidget);
     expect(find.text('Áp dụng'), findsOneWidget);
+
+    await tester.drag(
+      find.byType(SingleChildScrollView),
+      const Offset(0, -600),
+    );
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Xác nhận đặt hàng'), findsOneWidget);
   });
 }

@@ -87,7 +87,9 @@ class AppTheme {
       // ─── Buttons ───────────────────────────────────────────────
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
+          // Size.fromHeight gives a button an infinite minimum width. That
+          // breaks buttons inside scrollable sheets on Flutter web.
+          minimumSize: const Size(0, 52),
           shape: RoundedRectangleBorder(borderRadius: AppRadii.borderLg),
           elevation: 0,
           textStyle: const TextStyle(
@@ -99,7 +101,7 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
+          minimumSize: const Size(0, 52),
           shape: RoundedRectangleBorder(borderRadius: AppRadii.borderLg),
           side: BorderSide(color: scheme.outlineVariant.withValues(alpha: .6)),
           textStyle: const TextStyle(
