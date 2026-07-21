@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../models/coupon_model.dart';
@@ -107,22 +108,7 @@ class FirestoreDatabase {
   }
 
   Future<AppUser> signInWithGoogle() async {
-    if (!_googleInitialized) {
-      await _googleSignIn.initialize();
-      _googleInitialized = true;
-    }
-
-    final googleAccount = await _googleSignIn.authenticate();
-    final idToken = googleAccount.authentication.idToken;
-    if (idToken == null || idToken.isEmpty) {
-      throw FirebaseAuthException(
-        code: 'missing-google-id-token',
-        message: 'Không lấy được Google ID token.',
-      );
-    }
-
-    final credential = GoogleAuthProvider.credential(idToken: idToken);
-    final userCredential = await _auth.signInWithCredential(credential);
+    final userCredential = await _authenticateWithGoogle();
     final firebaseUser = userCredential.user!;
 
     final existing = await getUserById(firebaseUser.uid);
@@ -151,6 +137,32 @@ class FirestoreDatabase {
     );
     await saveUser(appUser);
     return appUser;
+  }
+
+  Future<UserCredential> _authenticateWithGoogle() async {
+    // Google Identity Services on web requires Firebase's browser popup flow.
+    // google_sign_in.authenticate() is available only on mobile platforms.
+    if (kIsWeb) {
+      return _auth.signInWithPopup(GoogleAuthProvider());
+    }
+
+    if (!_googleInitialized) {
+      await _googleSignIn.initialize();
+      _googleInitialized = true;
+    }
+
+    final googleAccount = await _googleSignIn.authenticate();
+    final idToken = googleAccount.authentication.idToken;
+    if (idToken == null || idToken.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'missing-google-id-token',
+        message: 'Không lấy được Google ID token.',
+      );
+    }
+
+    return _auth.signInWithCredential(
+      GoogleAuthProvider.credential(idToken: idToken),
+    );
   }
 
   Future<void> logout() async {

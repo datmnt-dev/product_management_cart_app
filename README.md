@@ -74,6 +74,19 @@ flutter run -d chrome
 flutter run -d windows
 ```
 
+### Google Sign-In trên web
+
+Trong Google Cloud Console, Web OAuth client phải có Authorized JavaScript
+origins `http://localhost` và `http://localhost:7357`. Chạy app trên cổng cố
+định để origin khớp:
+
+```powershell
+flutter run -d chrome --web-hostname localhost --web-port 7357
+```
+
+Web dùng Firebase Auth popup; Android và iOS dùng luồng native của
+`google_sign_in`.
+
 ## Kiểm tra
 
 ```powershell
