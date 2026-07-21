@@ -150,5 +150,21 @@ void main() {
       expect(paid.countsTowardRevenue, isTrue);
       expect(refunded.countsTowardRevenue, isFalse);
     });
+
+    test('legacy orders tolerate null coupon metadata', () {
+      final order = OrderModel.fromMap({
+        'id': 'legacy-order',
+        'userEmail': 'customer@store.local',
+        'items': const [],
+        'totalAmount': 100,
+        'createdAt': DateTime(2026, 7, 21, 10),
+        'couponCode': null,
+        'discountAmount': null,
+      });
+
+      expect(order.couponCode, '');
+      expect(order.discountAmount, 0);
+      expect(order.hasDiscount, isFalse);
+    });
   });
 }
