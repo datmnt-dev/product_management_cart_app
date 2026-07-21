@@ -54,9 +54,13 @@ class ProductController extends ChangeNotifier {
 
   /// Filtered list using design §5.1 pipeline.
   List<Product> get visibleProducts {
-    final canManage = _authController.currentUser?.canManageProducts ?? false;
+    final user = _authController.currentUser;
+    final canManage = user?.canManageProducts ?? false;
+    final source = user?.isSeller == true
+        ? _products.where((p) => p.sellerId == user!.id).toList()
+        : _products;
     return applyProductFilters(
-      products: _products,
+      products: source,
       canManageProducts: canManage,
       category: _category,
       statusFilter: _statusFilter,
@@ -81,6 +85,7 @@ class ProductController extends ChangeNotifier {
     if (user == null) {
       return false;
     }
+    if (user.isSeller) return product.sellerId == user.id;
     return isProductVisibleToRole(
       product: product,
       canManageProducts: user.canManageProducts,
@@ -138,6 +143,8 @@ class ProductController extends ChangeNotifier {
     required String imageUrl,
   }) async {
     final now = DateTime.now();
+    final owner = _authController.currentUser;
+    if (owner == null) throw StateError('Vui lòng đăng nhập lại.');
     final product = Product(
       id: 'product-${now.microsecondsSinceEpoch}',
       sku: sku.trim().isEmpty ? _createSku(now) : sku.trim().toUpperCase(),
@@ -150,6 +157,8 @@ class ProductController extends ChangeNotifier {
       imageUrl: imageUrl.trim(),
       createdAt: now,
       updatedAt: now,
+      sellerId: owner.id,
+      sellerName: owner.fullName,
     );
 
     await _database.saveProduct(product);
@@ -157,6 +166,11 @@ class ProductController extends ChangeNotifier {
   }
 
   Future<void> updateProduct(Product product) async {
+    final actor = _authController.currentUser;
+    if (actor == null) throw StateError('Vui lòng đăng nhập lại.');
+    if (actor.role == AppRole.seller && product.sellerId != actor.id) {
+      throw StateError('Seller chỉ có thể cập nhật sản phẩm của shop mình.');
+    }
     await _database.saveProduct(product.copyWith(updatedAt: DateTime.now()));
   }
 

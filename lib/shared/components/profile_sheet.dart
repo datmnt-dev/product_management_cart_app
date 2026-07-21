@@ -75,6 +75,11 @@ class ProfileSheet extends StatelessWidget {
                   ],
                 ),
               ),
+              IconButton(
+                tooltip: 'Chỉnh sửa hồ sơ',
+                onPressed: () => _editProfile(context),
+                icon: const Icon(Icons.edit_outlined),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -92,5 +97,68 @@ class ProfileSheet extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _editProfile(BuildContext context) async {
+    final user = context.read<AuthController>().currentUser!;
+    final name = TextEditingController(text: user.fullName);
+    final phone = TextEditingController(text: user.phone);
+    final shop = TextEditingController(text: user.shopName);
+    final bio = TextEditingController(text: user.bio);
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Hồ sơ cá nhân'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: name,
+                decoration: const InputDecoration(labelText: 'Họ và tên'),
+              ),
+              TextField(
+                controller: phone,
+                decoration: const InputDecoration(labelText: 'Số điện thoại'),
+              ),
+              if (user.isSeller)
+                TextField(
+                  controller: shop,
+                  decoration: const InputDecoration(labelText: 'Tên shop'),
+                ),
+              TextField(
+                controller: bio,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  labelText: user.isSeller ? 'Giới thiệu shop' : 'Giới thiệu',
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Hủy'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              await dialogContext.read<AuthController>().updateProfile(
+                fullName: name.text,
+                phone: phone.text,
+                shopName: shop.text,
+                bio: bio.text,
+              );
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+            },
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+    name.dispose();
+    phone.dispose();
+    shop.dispose();
+    bio.dispose();
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum AppRole { admin, manager, customer }
+enum AppRole { admin, manager, seller, customer }
 
 extension AppRoleX on AppRole {
   String get key {
@@ -9,6 +9,8 @@ extension AppRoleX on AppRole {
         return 'admin';
       case AppRole.manager:
         return 'manager';
+      case AppRole.seller:
+        return 'seller';
       case AppRole.customer:
         return 'customer';
     }
@@ -20,6 +22,8 @@ extension AppRoleX on AppRole {
         return 'Admin';
       case AppRole.manager:
         return 'Manager';
+      case AppRole.seller:
+        return 'Seller';
       case AppRole.customer:
         return 'Customer';
     }
@@ -31,6 +35,8 @@ extension AppRoleX on AppRole {
         return 'Quản trị viên';
       case AppRole.manager:
         return 'Quản lý';
+      case AppRole.seller:
+        return 'Người bán';
       case AppRole.customer:
         return 'Khách hàng';
     }
@@ -42,6 +48,8 @@ extension AppRoleX on AppRole {
         return 'Quản trị toàn hệ thống: kho, điều phối mọi đơn, doanh thu, phân quyền.';
       case AppRole.manager:
         return 'Vận hành kho, điều phối đơn hàng và theo dõi doanh thu (không đổi role).';
+      case AppRole.seller:
+        return 'Tự quản lý sản phẩm, tồn kho và giao đơn của shop mình.';
       case AppRole.customer:
         return 'Mua hàng, checkout và theo dõi đơn của chính mình.';
     }
@@ -53,6 +61,8 @@ extension AppRoleX on AppRole {
         return Icons.admin_panel_settings_outlined;
       case AppRole.manager:
         return Icons.manage_accounts_outlined;
+      case AppRole.seller:
+        return Icons.storefront_outlined;
       case AppRole.customer:
         return Icons.shopping_basket_outlined;
     }
@@ -72,21 +82,27 @@ extension AppRoleX on AppRole {
         return const Color(0xFF7C3AED);
       case AppRole.manager:
         return const Color(0xFF0F766E);
+      case AppRole.seller:
+        return const Color(0xFF2563EB);
       case AppRole.customer:
         return const Color(0xFFD97706);
     }
   }
 
   bool get canManageProducts {
-    return this == AppRole.admin || this == AppRole.manager;
+    return this == AppRole.admin ||
+        this == AppRole.manager ||
+        this == AppRole.seller;
   }
 
   bool get canDeleteProducts {
-    return this == AppRole.admin || this == AppRole.manager;
+    return this == AppRole.admin ||
+        this == AppRole.manager ||
+        this == AppRole.seller;
   }
 
   bool get canShop {
-    return this == AppRole.customer;
+    return this == AppRole.customer || this == AppRole.seller;
   }
 
   bool get canViewRevenue {
@@ -112,6 +128,8 @@ extension AppRoleX on AppRole {
         return AppRole.admin;
       case 'manager':
         return AppRole.manager;
+      case 'seller':
+        return AppRole.seller;
       case 'customer':
       default:
         return AppRole.customer;

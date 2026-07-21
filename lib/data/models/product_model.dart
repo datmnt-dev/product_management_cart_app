@@ -101,6 +101,8 @@ class Product {
     required this.imageUrl,
     required this.createdAt,
     required this.updatedAt,
+    this.sellerId = '',
+    this.sellerName = '',
   });
 
   final String id;
@@ -114,6 +116,8 @@ class Product {
   final String imageUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String sellerId;
+  final String sellerName;
 
   bool get hasImage => imageUrl.trim().isNotEmpty;
   bool get isActive => status == ProductStatus.active;
@@ -132,6 +136,8 @@ class Product {
     String? imageUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? sellerId,
+    String? sellerName,
   }) {
     return Product(
       id: id ?? this.id,
@@ -145,6 +151,8 @@ class Product {
       imageUrl: imageUrl ?? this.imageUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      sellerId: sellerId ?? this.sellerId,
+      sellerName: sellerName ?? this.sellerName,
     );
   }
 
@@ -161,6 +169,8 @@ class Product {
       'imageUrl': imageUrl,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
+      'sellerId': sellerId,
+      'sellerName': sellerName,
     };
   }
 
@@ -183,6 +193,8 @@ class Product {
       imageUrl: map['imageUrl']?.toString() ?? '',
       createdAt: _dateFrom(map['createdAt']),
       updatedAt: _dateFrom(map['updatedAt']),
+      sellerId: map['sellerId']?.toString() ?? '',
+      sellerName: map['sellerName']?.toString() ?? '',
     );
   }
 

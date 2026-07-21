@@ -27,6 +27,10 @@ service cloud.firestore {
       return role() == 'manager';
     }
 
+    function isSeller() {
+      return role() == 'seller';
+    }
+
     function isStaff() {
       return isAdmin() || isManager();
     }
@@ -53,7 +57,10 @@ service cloud.firestore {
 
     match /products/{productId} {
       allow read: if signedIn();
-      allow create, delete: if isStaff();
+      allow create: if isStaff()
+        || (isSeller() && request.resource.data.sellerId == request.auth.uid);
+      allow delete: if isStaff()
+        || (isSeller() && resource.data.sellerId == request.auth.uid);
       // Customer may decrease (checkout) or increase (cancel restock) stock only.
       // Lab trust model — no Cloud Functions; client only uses these paths.
       allow update: if isStaff()
@@ -71,6 +78,11 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create, delete: if isStaff();
       allow update: if isStaff()
+        || (
+          isSeller()
+          && resource.data.sellerId == request.auth.uid
+          && request.resource.data.sellerId == resource.data.sellerId
+        )
         || (
           isCustomer()
           && request.resource.data.diff(resource.data).affectedKeys()
