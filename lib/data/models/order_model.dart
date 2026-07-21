@@ -410,6 +410,9 @@ class OrderModel {
     required this.items,
     required this.totalAmount,
     required this.createdAt,
+    this.subtotalAmount,
+    this.discountAmount = 0,
+    this.couponCode = '',
     this.status = OrderStatus.placed,
     this.updatedAt,
     this.statusHistory = const [],
@@ -426,6 +429,9 @@ class OrderModel {
   final String userEmail;
   final List<OrderLine> items;
   final double totalAmount;
+  final double? subtotalAmount;
+  final double discountAmount;
+  final String couponCode;
   final DateTime createdAt;
   final OrderStatus status;
   final DateTime? updatedAt;
@@ -445,6 +451,11 @@ class OrderModel {
   }
 
   DateTime get lastUpdated => updatedAt ?? createdAt;
+
+  double get effectiveSubtotal =>
+      subtotalAmount ?? totalAmount + discountAmount;
+
+  bool get hasDiscount => couponCode.trim().isNotEmpty && discountAmount > 0;
 
   bool get canCustomerCancel =>
       status == OrderStatus.placed || status == OrderStatus.confirmed;
@@ -468,6 +479,9 @@ class OrderModel {
     String? userEmail,
     List<OrderLine>? items,
     double? totalAmount,
+    double? subtotalAmount,
+    double? discountAmount,
+    String? couponCode,
     DateTime? createdAt,
     OrderStatus? status,
     DateTime? updatedAt,
@@ -485,6 +499,9 @@ class OrderModel {
       userEmail: userEmail ?? this.userEmail,
       items: items ?? this.items,
       totalAmount: totalAmount ?? this.totalAmount,
+      subtotalAmount: subtotalAmount ?? this.subtotalAmount,
+      discountAmount: discountAmount ?? this.discountAmount,
+      couponCode: couponCode ?? this.couponCode,
       createdAt: createdAt ?? this.createdAt,
       status: status ?? this.status,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -527,6 +544,9 @@ class OrderModel {
       'id': id,
       'userEmail': userEmail,
       'items': items.map((item) => item.toMap()).toList(),
+      'subtotalAmount': effectiveSubtotal,
+      'discountAmount': discountAmount,
+      'couponCode': couponCode,
       'totalAmount': totalAmount,
       'createdAt': createdAt,
       'status': status.key,
@@ -580,14 +600,25 @@ class OrderModel {
             ),
           ];
 
+    final totalAmount =
+        (map['totalAmount'] as num?)?.toDouble() ??
+        double.tryParse(map['totalAmount']?.toString() ?? '') ??
+        0;
+    final discountAmount =
+        (map['discountAmount'] as num?)?.toDouble() ??
+        double.tryParse(map['discountAmount']?.toString() ?? '') ??
+        0;
+
     return OrderModel(
       id: map['id']?.toString() ?? '',
       userEmail: map['userEmail']?.toString() ?? '',
       items: lines,
-      totalAmount:
-          (map['totalAmount'] as num?)?.toDouble() ??
-          double.tryParse(map['totalAmount']?.toString() ?? '') ??
-          0,
+      totalAmount: totalAmount,
+      subtotalAmount:
+          (map['subtotalAmount'] as num?)?.toDouble() ??
+          double.tryParse(map['subtotalAmount']?.toString() ?? ''),
+      discountAmount: discountAmount,
+      couponCode: map['couponCode']?.toString() ?? '',
       createdAt: createdAt,
       status: status,
       updatedAt: map['updatedAt'] != null

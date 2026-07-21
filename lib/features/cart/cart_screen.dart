@@ -8,6 +8,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/validators.dart';
 import '../../data/models/cart_item.dart';
+import '../../data/models/coupon_model.dart';
 import '../../data/models/order_model.dart';
 import '../../shared/components/price_text.dart';
 import '../../shared/components/primary_bottom_bar.dart';
@@ -203,6 +204,12 @@ class _CartScreenState extends State<CartScreen> {
           totalQuantity: cart.totalQuantity,
           totalPrice: cart.totalPrice,
           defaultName: user.fullName,
+          onPreviewCoupon: (code) {
+            return orderController.previewCoupon(
+              code: code,
+              subtotal: cart.totalPrice,
+            );
+          },
         );
       },
     );
@@ -223,6 +230,7 @@ class _CartScreenState extends State<CartScreen> {
         shippingAddress: shipping.address,
         note: shipping.note,
         paymentMethod: shipping.paymentMethod,
+        couponCode: shipping.couponCode,
       );
       cart.clear();
 
@@ -235,6 +243,14 @@ class _CartScreenState extends State<CartScreen> {
         showDragHandle: true,
         isDismissible: true,
         builder: (ctx) {
+          final discountLine = order.hasDiscount
+              ? 'Mã ${order.couponCode} giảm ${formatCurrency(order.discountAmount)}.\n'
+              : '';
+          final successMessage =
+              'Đơn #$orderLabel đang ở trạng thái "Đã gửi đơn".\n'
+              '$discountLine'
+              '${order.paymentMethod.shortLabel} · ${order.paymentStatus.label}.\n'
+              'Cửa hàng sẽ xác nhận khi nhận đơn — bạn có thể theo dõi trong mục Đơn.';
           return Padding(
             padding: EdgeInsets.fromLTRB(
               AppSpacing.lg,
@@ -260,12 +276,7 @@ class _CartScreenState extends State<CartScreen> {
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Đơn #$orderLabel đang ở trạng thái "Đã gửi đơn".\n'
-                  '${order.paymentMethod.shortLabel} · ${order.paymentStatus.label}.\n'
-                  'Cửa hàng sẽ xác nhận khi nhận đơn — bạn có thể theo dõi trong mục Đơn.',
-                  textAlign: TextAlign.center,
-                ),
+                Text(successMessage, textAlign: TextAlign.center),
                 const SizedBox(height: AppSpacing.lg),
                 FilledButton(
                   onPressed: () {
@@ -425,6 +436,7 @@ class _CheckoutPayload {
     required this.address,
     required this.note,
     required this.paymentMethod,
+    required this.couponCode,
   });
 
   final String name;
@@ -432,6 +444,7 @@ class _CheckoutPayload {
   final String address;
   final String note;
   final PaymentMethod paymentMethod;
+  final String couponCode;
 }
 
 class _CheckoutSheet extends StatefulWidget {
@@ -439,11 +452,13 @@ class _CheckoutSheet extends StatefulWidget {
     required this.totalQuantity,
     required this.totalPrice,
     required this.defaultName,
+    required this.onPreviewCoupon,
   });
 
   final int totalQuantity;
   final double totalPrice;
   final String defaultName;
+  final Future<AppliedCoupon> Function(String code) onPreviewCoupon;
 
   @override
   State<_CheckoutSheet> createState() => _CheckoutSheetState();
@@ -455,7 +470,10 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   late final TextEditingController _phone;
   late final TextEditingController _address;
   late final TextEditingController _note;
+  late final TextEditingController _coupon;
   PaymentMethod _paymentMethod = PaymentMethod.cashOnDelivery;
+  AppliedCoupon? _appliedCoupon;
+  bool _checkingCoupon = false;
 
   @override
   void initState() {
@@ -464,6 +482,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
     _phone = TextEditingController();
     _address = TextEditingController();
     _note = TextEditingController();
+    _coupon = TextEditingController();
   }
 
   @override
@@ -472,12 +491,18 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
     _phone.dispose();
     _address.dispose();
     _note.dispose();
+    _coupon.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    final discount = _appliedCoupon?.discountAmount ?? 0;
+    final finalTotal = (widget.totalPrice - discount).clamp(
+      0,
+      widget.totalPrice,
+    );
     return Padding(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -501,7 +526,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
               const SizedBox(height: AppSpacing.xs),
               Text(
                 '${widget.totalQuantity} sản phẩm · '
-                '${formatCurrency(widget.totalPrice)}',
+                '${formatCurrency(finalTotal.toDouble())}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               const SizedBox(height: AppSpacing.md),
@@ -550,6 +575,55 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
               ),
               const SizedBox(height: AppSpacing.md),
               Text(
+                'Mã giảm giá',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _coupon,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: InputDecoration(
+                        labelText: 'Coupon code',
+                        prefixIcon: const Icon(Icons.confirmation_num_outlined),
+                        suffixIcon: _appliedCoupon == null
+                            ? null
+                            : IconButton(
+                                tooltip: 'Bỏ mã',
+                                onPressed: _clearCoupon,
+                                icon: const Icon(Icons.close),
+                              ),
+                      ),
+                      onChanged: (_) {
+                        if (_appliedCoupon != null) _discardAppliedCoupon();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton.tonal(
+                    onPressed: _checkingCoupon ? null : _applyCoupon,
+                    child: _checkingCoupon
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Áp dụng'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _CheckoutTotalBreakdown(
+                subtotal: widget.totalPrice,
+                appliedCoupon: _appliedCoupon,
+                total: finalTotal.toDouble(),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
                 'Phương thức thanh toán',
                 style: Theme.of(
                   context,
@@ -578,6 +652,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                       address: _address.text.trim(),
                       note: _note.text.trim(),
                       paymentMethod: _paymentMethod,
+                      couponCode: _appliedCoupon?.code ?? '',
                     ),
                   );
                 },
@@ -591,6 +666,109 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _applyCoupon() async {
+    final code = _coupon.text.trim();
+    if (code.isEmpty) return;
+    setState(() => _checkingCoupon = true);
+    try {
+      final applied = await widget.onPreviewCoupon(code);
+      if (!mounted) return;
+      setState(() {
+        _appliedCoupon = applied;
+        _coupon.text = applied.code;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Bad state: ', '')),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _checkingCoupon = false);
+    }
+  }
+
+  void _clearCoupon() {
+    setState(() {
+      _appliedCoupon = null;
+      _coupon.clear();
+    });
+  }
+
+  void _discardAppliedCoupon() {
+    setState(() => _appliedCoupon = null);
+  }
+}
+
+class _CheckoutTotalBreakdown extends StatelessWidget {
+  const _CheckoutTotalBreakdown({
+    required this.subtotal,
+    required this.appliedCoupon,
+    required this.total,
+  });
+
+  final double subtotal;
+  final AppliedCoupon? appliedCoupon;
+  final double total;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: .35),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          _totalRow('Tạm tính', formatCurrency(subtotal)),
+          if (appliedCoupon != null) ...[
+            const SizedBox(height: 6),
+            _totalRow(
+              'Giảm ${appliedCoupon!.code}',
+              '-${formatCurrency(appliedCoupon!.discountAmount)}',
+              color: Colors.green,
+            ),
+          ],
+          const Divider(height: 16),
+          _totalRow(
+            'Thanh toán',
+            formatCurrency(total),
+            isStrong: true,
+            color: cs.primary,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _totalRow(
+    String label,
+    String value, {
+    bool isStrong = false,
+    Color? color,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: isStrong ? FontWeight.w900 : FontWeight.w700,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(fontWeight: FontWeight.w900, color: color),
+        ),
+      ],
     );
   }
 }

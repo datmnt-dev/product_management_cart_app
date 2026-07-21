@@ -67,6 +67,18 @@ service cloud.firestore {
         );
     }
 
+    match /coupons/{couponId} {
+      allow read: if signedIn();
+      allow create, delete: if isStaff();
+      allow update: if isStaff()
+        || (
+          isCustomer()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['usedCount', 'updatedAt'])
+          && request.resource.data.usedCount == resource.data.usedCount + 1
+        );
+    }
+
     match /orders/{orderId} {
       function orderOwnedByCaller() {
         return request.auth.token.email is string
@@ -168,8 +180,13 @@ service cloud.firestore {
       allow create: if signedIn()
         && isCustomer()
         && emailMatchesAuth()
+        && request.resource.data.subtotalAmount is number
+        && request.resource.data.subtotalAmount >= request.resource.data.totalAmount
+        && request.resource.data.discountAmount is number
+        && request.resource.data.discountAmount >= 0
         && request.resource.data.totalAmount is number
         && request.resource.data.totalAmount > 0
+        && request.resource.data.couponCode is string
         && request.resource.data.items is list
         && request.resource.data.items.size() > 0
         && request.resource.data.status == 'placed'

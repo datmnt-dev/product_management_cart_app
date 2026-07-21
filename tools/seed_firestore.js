@@ -189,6 +189,48 @@ const products = [
   },
 ];
 
+const coupons = [
+  {
+    code: "WELCOME10",
+    type: "percent",
+    value: 10,
+    minOrderAmount: 500000,
+    maxDiscountAmount: 1000000,
+    startsAt: monthsAgo(1),
+    expiresAt: monthsAgo(-2),
+    isActive: true,
+    usageLimit: 100,
+    usedCount: 0,
+    description: "Giảm 10% cho đơn đầu tiên.",
+  },
+  {
+    code: "FREESHIP50",
+    type: "fixed_amount",
+    value: 50000,
+    minOrderAmount: 300000,
+    maxDiscountAmount: 50000,
+    startsAt: monthsAgo(1),
+    expiresAt: monthsAgo(-1),
+    isActive: true,
+    usageLimit: 200,
+    usedCount: 0,
+    description: "Giảm 50.000đ mô phỏng freeship.",
+  },
+  {
+    code: "EXPIRED20",
+    type: "percent",
+    value: 20,
+    minOrderAmount: 100000,
+    maxDiscountAmount: 500000,
+    startsAt: monthsAgo(6),
+    expiresAt: monthsAgo(5),
+    isActive: true,
+    usageLimit: 10,
+    usedCount: 0,
+    description: "Mã hết hạn để kiểm tra edge case.",
+  },
+];
+
 const orderTemplates = [
   {
     id: "seed-order-today-mixed",
@@ -209,6 +251,7 @@ const orderTemplates = [
     status: "confirmed",
     paymentMethod: "bank_transfer",
     paymentStatus: "paid",
+    couponCode: "WELCOME10",
     items: [
       line("seed-gaming-laptop-low-stock", 1),
     ],
@@ -220,6 +263,7 @@ const orderTemplates = [
     status: "preparing",
     paymentMethod: "mock_wallet",
     paymentStatus: "paid",
+    couponCode: "FREESHIP50",
     items: [
       line("seed-air-fryer", 1),
       line("seed-backpack-no-image", 2),
@@ -289,6 +333,7 @@ const orderTemplates = [
     status: "delivered",
     paymentMethod: "cash_on_delivery",
     paymentStatus: "paid",
+    couponCode: "WELCOME10",
     items: [
       line("seed-android-budget", 1),
       line("seed-air-fryer", 1),
@@ -319,6 +364,10 @@ function buildOrder(template) {
     (total, item) => total + item.unitPrice * item.quantity,
     0,
   );
+  const couponCode = (template.couponCode || "").trim().toUpperCase();
+  const coupon = coupons.find((value) => value.code === couponCode);
+  const discountAmount = coupon ? discountForCoupon(coupon, totalAmount) : 0;
+  const payableAmount = Math.max(0, totalAmount - discountAmount);
   const status = template.status || "placed";
   const paymentMethod = template.paymentMethod || "cash_on_delivery";
   const paymentStatus = template.paymentStatus || (
@@ -330,7 +379,10 @@ function buildOrder(template) {
     id: template.id,
     userEmail: template.userEmail,
     items,
-    totalAmount,
+    subtotalAmount: totalAmount,
+    discountAmount,
+    couponCode,
+    totalAmount: payableAmount,
     createdAt,
     updatedAt: statusHistory[statusHistory.length - 1].at,
     status,
@@ -349,6 +401,17 @@ function buildOrder(template) {
       : "01 StoreFlow Demo Street, District 7, Ho Chi Minh City",
     note: status === "cancelled" ? "Seed đơn hủy để kiểm tra doanh thu." : "",
   };
+}
+
+function discountForCoupon(coupon, subtotal) {
+  if (subtotal < coupon.minOrderAmount) return 0;
+  const raw = coupon.type === "percent"
+    ? subtotal * coupon.value / 100
+    : coupon.value;
+  const capped = coupon.maxDiscountAmount > 0
+    ? Math.min(raw, coupon.maxDiscountAmount)
+    : raw;
+  return Math.max(0, Math.min(capped, subtotal));
 }
 
 function buildStatusHistory(status, createdAt, userEmail) {
@@ -416,6 +479,11 @@ async function main() {
     await writeDocument(`products/${product.id}`, admin.idToken, product);
   }
 
+  console.log("Writing Firestore coupons...");
+  for (const coupon of coupons) {
+    await writeDocument(`coupons/${coupon.code}`, admin.idToken, coupon);
+  }
+
   console.log("Writing Firestore orders...");
   for (const order of orderTemplates.map(buildOrder)) {
     await writeDocument(`orders/${order.id}`, admin.idToken, order);
@@ -426,8 +494,9 @@ async function main() {
     seededAt: now,
     accountCount: seededAccounts.length,
     productCount: products.length,
+    couponCount: coupons.length,
     orderCount: orderTemplates.length,
-    notes: "Seed data covers auth roles, product CRUD states, cart stock edges, checkout history, and revenue filters.",
+    notes: "Seed data covers auth roles, product CRUD states, cart stock edges, checkout history, coupons, payments, and revenue filters.",
   });
 
   console.log("Seed complete.");

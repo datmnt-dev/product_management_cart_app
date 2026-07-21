@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../core/utils/load_status.dart';
 import '../data/models/cart_item.dart';
+import '../data/models/coupon_model.dart';
 import '../data/models/order_model.dart';
 import '../data/models/product_model.dart';
 import '../data/models/user_model.dart';
@@ -94,6 +95,7 @@ class OrderController extends ChangeNotifier {
     String shippingAddress = '',
     String note = '',
     PaymentMethod paymentMethod = PaymentMethod.cashOnDelivery,
+    String couponCode = '',
   }) async {
     final now = DateTime.now();
     final orderItems = items.map((item) {
@@ -116,6 +118,7 @@ class OrderController extends ChangeNotifier {
         0,
         (total, item) => total + item.totalPrice,
       ),
+      couponCode: Coupon.normalizeCode(couponCode),
       createdAt: now,
       updatedAt: now,
       status: OrderStatus.placed,
@@ -147,6 +150,13 @@ class OrderController extends ChangeNotifier {
       order: order,
       quantitiesByProductId: quantities,
     );
+  }
+
+  Future<AppliedCoupon> previewCoupon({
+    required String code,
+    required double subtotal,
+  }) {
+    return _database.previewCoupon(code: code, subtotal: subtotal);
   }
 
   /// Staff or customer status transition with validation.

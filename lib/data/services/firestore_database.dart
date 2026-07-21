@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../models/coupon_model.dart';
 import '../models/order_model.dart';
 import '../models/product_model.dart';
 import '../models/user_model.dart';
@@ -27,6 +28,8 @@ class FirestoreDatabase {
       _firestore.collection('products');
   CollectionReference<Map<String, dynamic>> get _orders =>
       _firestore.collection('orders');
+  CollectionReference<Map<String, dynamic>> get _coupons =>
+      _firestore.collection('coupons');
 
   User? get firebaseUser => _auth.currentUser;
 
@@ -189,6 +192,26 @@ class FirestoreDatabase {
     await _products.doc(id).delete();
   }
 
+  Future<AppliedCoupon> previewCoupon({
+    required String code,
+    required double subtotal,
+  }) async {
+    final normalized = Coupon.normalizeCode(code);
+    if (normalized.isEmpty) {
+      throw StateError('Vui lòng nhập mã giảm giá.');
+    }
+    final snapshot = await _coupons.doc(normalized).get();
+    if (!snapshot.exists || snapshot.data() == null) {
+      throw StateError('Mã giảm giá không tồn tại.');
+    }
+    final coupon = Coupon.fromMap({'code': snapshot.id, ...snapshot.data()!});
+    return _applyCoupon(
+      coupon: coupon,
+      subtotal: subtotal,
+      now: DateTime.now(),
+    );
+  }
+
   Future<bool> reduceStock(Map<String, int> quantitiesByProductId) async {
     try {
       await _firestore.runTransaction((transaction) async {
@@ -265,6 +288,8 @@ class FirestoreDatabase {
     );
 
     final orderRef = _orders.doc(normalized.id);
+    final couponCode = Coupon.normalizeCode(normalized.couponCode);
+    final couponRef = couponCode.isEmpty ? null : _coupons.doc(couponCode);
     late OrderModel committedOrder;
 
     await _firestore.runTransaction((transaction) async {
@@ -276,6 +301,9 @@ class FirestoreDatabase {
       for (final entry in productRefs.entries) {
         snapshots[entry.key] = await transaction.get(entry.value);
       }
+      final couponSnapshot = couponRef == null
+          ? null
+          : await transaction.get(couponRef);
 
       for (final entry in quantitiesByProductId.entries) {
         final snapshot = snapshots[entry.key];
@@ -318,13 +346,41 @@ class FirestoreDatabase {
         });
       }
 
-      final liveTotal = liveLines.fold<double>(
+      final liveSubtotal = liveLines.fold<double>(
         0,
         (total, item) => total + item.totalPrice,
       );
+      var discountAmount = 0.0;
+      var appliedCouponCode = '';
+      if (couponRef != null) {
+        if (couponSnapshot == null ||
+            !couponSnapshot.exists ||
+            couponSnapshot.data() == null) {
+          throw StateError('Mã giảm giá không tồn tại.');
+        }
+        final coupon = Coupon.fromMap({
+          'code': couponSnapshot.id,
+          ...couponSnapshot.data()!,
+        });
+        final applied = _applyCoupon(
+          coupon: coupon,
+          subtotal: liveSubtotal,
+          now: DateTime.now(),
+        );
+        discountAmount = applied.discountAmount;
+        appliedCouponCode = applied.code;
+        transaction.update(couponRef, {
+          'usedCount': coupon.usedCount + 1,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+      final liveTotal = (liveSubtotal - discountAmount).clamp(0, liveSubtotal);
       committedOrder = normalized.copyWith(
         items: liveLines,
-        totalAmount: liveTotal,
+        subtotalAmount: liveSubtotal,
+        discountAmount: discountAmount,
+        couponCode: appliedCouponCode,
+        totalAmount: liveTotal.toDouble(),
       );
       transaction.set(orderRef, committedOrder.toMap());
     });
@@ -437,5 +493,32 @@ class FirestoreDatabase {
 
   Future<void> saveOrder(OrderModel order) async {
     await _orders.doc(order.id).set(order.toMap(), SetOptions(merge: true));
+  }
+
+  AppliedCoupon _applyCoupon({
+    required Coupon coupon,
+    required double subtotal,
+    required DateTime now,
+  }) {
+    if (!coupon.isAvailable(now)) {
+      throw StateError('Mã giảm giá đã hết hạn hoặc không còn hiệu lực.');
+    }
+    if (subtotal < coupon.minOrderAmount) {
+      throw StateError(
+        'Mã ${coupon.code} yêu cầu đơn tối thiểu '
+        '${coupon.minOrderAmount.toStringAsFixed(0)}.',
+      );
+    }
+    final discount = coupon.discountFor(subtotal);
+    if (discount <= 0) {
+      throw StateError('Mã giảm giá không áp dụng được cho đơn này.');
+    }
+    return AppliedCoupon(
+      code: coupon.code,
+      description: coupon.description.trim().isEmpty
+          ? coupon.type.label
+          : coupon.description,
+      discountAmount: discount,
+    );
   }
 }
