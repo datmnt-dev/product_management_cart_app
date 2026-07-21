@@ -139,6 +139,10 @@ class OrderExpandableTile extends StatelessWidget {
               ),
             ),
           ),
+          if (order.hasShippingInfo || order.customerName.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _ShippingBlock(order: order),
+          ],
           const SizedBox(height: AppSpacing.sm),
           OrderTrackingTimeline(order: order),
           if (user != null) ...[
@@ -149,6 +153,77 @@ class OrderExpandableTile extends StatelessWidget {
               busy: orders.isUpdating,
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ShippingBlock extends StatelessWidget {
+  const _ShippingBlock({required this.order});
+  final OrderModel order;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final rows = <Widget>[];
+    if (order.customerName.trim().isNotEmpty) {
+      rows.add(_line(Icons.person_outline, order.customerName, cs));
+    }
+    if (order.phone.trim().isNotEmpty) {
+      rows.add(_line(Icons.phone_outlined, order.phone, cs));
+    }
+    if (order.shippingAddress.trim().isNotEmpty) {
+      rows.add(_line(Icons.location_on_outlined, order.shippingAddress, cs));
+    }
+    if (order.note.trim().isNotEmpty) {
+      rows.add(_line(Icons.sticky_note_2_outlined, order.note, cs));
+    }
+    if (rows.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: .45),
+        borderRadius: AppRadii.borderMd,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Giao hàng',
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+              color: cs.primary,
+            ),
+          ),
+          const SizedBox(height: 6),
+          ...rows,
+        ],
+      ),
+    );
+  }
+
+  Widget _line(IconData icon, String text, ColorScheme cs) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 14, color: cs.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
+            ),
+          ),
         ],
       ),
     );

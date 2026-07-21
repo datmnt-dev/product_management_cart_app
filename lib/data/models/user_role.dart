@@ -93,6 +93,11 @@ extension AppRoleX on AppRole {
     return this == AppRole.admin || this == AppRole.manager;
   }
 
+  /// Staff can open the order board and advance / cancel orders.
+  bool get canManageOrders {
+    return this == AppRole.admin || this == AppRole.manager;
+  }
+
   bool get canViewRoleMatrix {
     return this == AppRole.admin;
   }

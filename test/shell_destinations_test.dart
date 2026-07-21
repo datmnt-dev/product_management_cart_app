@@ -26,23 +26,26 @@ void main() {
       expect(dests.length, 3);
     });
 
-    test('manager has store + statistics (2 tabs)', () {
+    test('manager has store + order board + statistics (3 tabs)', () {
       final dests = destinationsFor(_user(AppRole.manager));
       expect(dests.map((d) => d.branchIndex).toList(), [
         ShellBranches.products,
+        ShellBranches.orders,
         ShellBranches.statistics,
       ]);
-      expect(dests.length, 2);
+      expect(dests.length, 3);
+      expect(dests[1].label, 'Bảng đơn');
     });
 
-    test('admin has store, statistics, roles (3 tabs)', () {
+    test('admin has store, order board, statistics, roles (4 tabs)', () {
       final dests = destinationsFor(_user(AppRole.admin));
       expect(dests.map((d) => d.branchIndex).toList(), [
         ShellBranches.products,
+        ShellBranches.orders,
         ShellBranches.statistics,
         ShellBranches.roles,
       ]);
-      expect(dests.length, 3);
+      expect(dests.length, 4);
     });
 
     test('branch indexes are fixed constants', () {

@@ -27,10 +27,10 @@ App dùng `StatefulShellRoute` + bottom `NavigationBar` (rail trên màn rộng)
 | Role | Tabs |
 | --- | --- |
 | **Customer** | Cửa hàng · Giỏ · Đơn |
-| **Manager** | Kho hàng · Thống kê |
-| **Admin** | Kho hàng · Thống kê · Quyền |
+| **Manager** | Kho hàng · **Bảng đơn** · Thống kê |
+| **Admin** | Kho hàng · **Bảng đơn** · Thống kê · Quyền |
 
-- Staff **không** có tab Đơn / Giỏ — đơn hàng staff xem trong **Thống kê**.
+- Staff **không** có Giỏ; đơn vận hành trên **Bảng đơn**, analytics trên **Thống kê**.
 - Chi tiết / form sản phẩm mở trên root navigator (không dual bottom bar).
 - Customer chỉ thấy sản phẩm **active** (list + deep link UX).
 
@@ -38,11 +38,14 @@ App dùng `StatefulShellRoute` + bottom `NavigationBar` (rail trên màn rộng)
 
 - Firebase Auth (đăng ký/đăng nhập), remember me, profile sheet logout.
 - CRUD sản phẩm (staff): SKU, danh mục, giá, tồn kho, trạng thái, URL ảnh.
-- Giỏ hàng session-local + kiểm tra tồn kho.
-- Checkout Firestore transaction trừ kho → tạo order (status **Đã gửi đơn**) → clear cart.
-- Tracking đơn: `placed → confirmed → preparing → shipping → delivered` (+ `cancelled`).
-- Customer: hủy sớm, xác nhận đã nhận khi đang giao; Staff: xác nhận nhận đơn và tiến trạng thái trên Thống kê.
-- Lịch sử đơn (customer) lọc theo status; dashboard doanh thu (staff) loại đơn hủy.
+- Catalog: tìm kiếm, lọc danh mục / còn hàng, sắp xếp (giá, mới, tồn).
+- Giỏ hàng **persist** theo user (SharedPreferences) + clamp theo tồn kho live.
+- Checkout atomic: trừ kho + tạo đơn; form **họ tên / SĐT / địa chỉ / ghi chú**.
+- Tracking: `placed → confirmed → preparing → shipping → delivered` (+ `cancelled`).
+- **Hủy đơn hoàn kho** (transaction + `stockRestored`).
+- Customer: lịch sử đơn + badge/alert khi status đổi (in-app).
+- Staff: tab **Bảng đơn** (lọc status, tìm email/SĐT), advance/cancel; Thống kê = analytics.
+- Dashboard: biểu đồ DT, top 8 SP, mix status, DT theo danh mục (loại đơn hủy).
 - Ma trận phân quyền (admin).
 
 ## Backend & seed
@@ -91,6 +94,7 @@ lib/
 ## Ghi chú kỹ thuật
 
 - Theme: `ThemeMode.system` (light + dark tokens).
-- Cart không persist Firestore (session).
-- Checkout lock chống double-tap; stock transaction trước khi tạo order.
+- Cart persist SharedPreferences theo email (không Firestore cart).
+- Checkout + cancel restock dùng Firestore transaction; `stockRestored` chống double restock.
+- Customer product rules cho phép ± stock (lab trust; client chỉ dùng checkout/cancel).
 - UI ẩn draft/archived với customer là **UX-only**; rules product read vẫn `signedIn()`.

@@ -45,10 +45,10 @@ List<ShellDestination> destinationsFor(AppUser user) {
         icon: Icons.shopping_bag_outlined,
         selectedIcon: Icons.shopping_bag,
       ),
-    if (user.canShop)
-      const ShellDestination(
+    if (user.canShop || user.canManageOrders)
+      ShellDestination(
         branchIndex: ShellBranches.orders,
-        label: 'Đơn',
+        label: user.canManageOrders ? 'Bảng đơn' : 'Đơn',
         icon: Icons.receipt_long_outlined,
         selectedIcon: Icons.receipt_long,
       ),

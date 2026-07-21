@@ -219,6 +219,7 @@ class OrderLine {
     required this.unitPrice,
     required this.quantity,
     required this.imageUrl,
+    this.category = 'other',
   });
 
   final String productId;
@@ -226,6 +227,8 @@ class OrderLine {
   final double unitPrice;
   final int quantity;
   final String imageUrl;
+  /// Snapshot category key at checkout (stable stats without product join).
+  final String category;
 
   double get totalPrice => unitPrice * quantity;
 
@@ -236,6 +239,7 @@ class OrderLine {
       'unitPrice': unitPrice,
       'quantity': quantity,
       'imageUrl': imageUrl,
+      'category': category,
     };
   }
 
@@ -252,6 +256,7 @@ class OrderLine {
           int.tryParse(map['quantity']?.toString() ?? '') ??
           0,
       imageUrl: map['imageUrl']?.toString() ?? '',
+      category: map['category']?.toString() ?? 'other',
     );
   }
 }
@@ -266,6 +271,11 @@ class OrderModel {
     this.status = OrderStatus.placed,
     this.updatedAt,
     this.statusHistory = const [],
+    this.stockRestored = false,
+    this.customerName = '',
+    this.phone = '',
+    this.shippingAddress = '',
+    this.note = '',
   });
 
   final String id;
@@ -276,6 +286,12 @@ class OrderModel {
   final OrderStatus status;
   final DateTime? updatedAt;
   final List<OrderStatusEvent> statusHistory;
+  /// True after cancel restock so we never restore stock twice.
+  final bool stockRestored;
+  final String customerName;
+  final String phone;
+  final String shippingAddress;
+  final String note;
 
   int get totalQuantity {
     return items.fold<int>(0, (total, item) => total + item.quantity);
@@ -288,6 +304,9 @@ class OrderModel {
 
   bool get canCustomerConfirmReceived => status == OrderStatus.shipping;
 
+  bool get hasShippingInfo =>
+      phone.trim().isNotEmpty || shippingAddress.trim().isNotEmpty;
+
   OrderModel copyWith({
     String? id,
     String? userEmail,
@@ -297,6 +316,11 @@ class OrderModel {
     OrderStatus? status,
     DateTime? updatedAt,
     List<OrderStatusEvent>? statusHistory,
+    bool? stockRestored,
+    String? customerName,
+    String? phone,
+    String? shippingAddress,
+    String? note,
   }) {
     return OrderModel(
       id: id ?? this.id,
@@ -307,6 +331,11 @@ class OrderModel {
       status: status ?? this.status,
       updatedAt: updatedAt ?? this.updatedAt,
       statusHistory: statusHistory ?? this.statusHistory,
+      stockRestored: stockRestored ?? this.stockRestored,
+      customerName: customerName ?? this.customerName,
+      phone: phone ?? this.phone,
+      shippingAddress: shippingAddress ?? this.shippingAddress,
+      note: note ?? this.note,
     );
   }
 
@@ -316,6 +345,7 @@ class OrderModel {
     required String byEmail,
     String note = '',
     DateTime? at,
+    bool? stockRestored,
   }) {
     final when = at ?? DateTime.now();
     final event = OrderStatusEvent(
@@ -328,6 +358,7 @@ class OrderModel {
       status: next,
       updatedAt: when,
       statusHistory: [...statusHistory, event],
+      stockRestored: stockRestored,
     );
   }
 
@@ -341,6 +372,11 @@ class OrderModel {
       'status': status.key,
       'updatedAt': updatedAt ?? createdAt,
       'statusHistory': statusHistory.map((e) => e.toMap()).toList(),
+      'stockRestored': stockRestored,
+      'customerName': customerName,
+      'phone': phone,
+      'shippingAddress': shippingAddress,
+      'note': note,
     };
   }
 
@@ -390,6 +426,11 @@ class OrderModel {
           ? dateFrom(map['updatedAt'])
           : createdAt,
       statusHistory: effectiveHistory,
+      stockRestored: map['stockRestored'] == true,
+      customerName: map['customerName']?.toString() ?? '',
+      phone: map['phone']?.toString() ?? '',
+      shippingAddress: map['shippingAddress']?.toString() ?? '',
+      note: map['note']?.toString() ?? '',
     );
   }
 

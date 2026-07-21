@@ -180,59 +180,97 @@ class _SearchTools extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canManage =
+        context.watch<AuthController>().currentUser?.canManageProducts ?? false;
+
     return Consumer<ProductController>(
       builder: (context, ctrl, _) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.xxs,
-            AppSpacing.md,
-            AppSpacing.xs,
-          ),
-          child: Column(
-            children: [
-              TextField(
-                onChanged: ctrl.setSearchQuery,
-                decoration: InputDecoration(
-                  hintText: 'Tìm sản phẩm & thương hiệu...',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: ctrl.searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, size: 20),
-                          onPressed: () => ctrl.setSearchQuery(''),
-                        )
-                      : null,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SegmentedButton<ProductSort>(
-                    selected: {ctrl.sort},
-                    onSelectionChanged: (s) => ctrl.setSort(s.first),
-                    segments: const [
-                      ButtonSegment(
-                        value: ProductSort.newest,
-                        icon: Icon(Icons.watch_later_outlined, size: 15),
-                        label: Text('Mới nhất'),
-                      ),
-                      ButtonSegment(
-                        value: ProductSort.priceAsc,
-                        icon: Icon(Icons.trending_up, size: 15),
-                        label: Text('Giá thấp'),
-                      ),
-                      ButtonSegment(
-                        value: ProductSort.priceDesc,
-                        icon: Icon(Icons.trending_down, size: 15),
-                        label: Text('Giá cao'),
-                      ),
-                    ],
+        return Material(
+          elevation: 0,
+          color: Theme.of(context).colorScheme.surface,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.xxs,
+              AppSpacing.md,
+              AppSpacing.xs,
+            ),
+            child: Column(
+              children: [
+                TextField(
+                  onChanged: ctrl.setSearchQuery,
+                  decoration: InputDecoration(
+                    hintText: 'Tìm tên, mô tả, SKU...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: ctrl.searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 20),
+                            onPressed: () => ctrl.setSearchQuery(''),
+                          )
+                        : null,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: AppSpacing.sm),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        SegmentedButton<ProductSort>(
+                          selected: {ctrl.sort},
+                          onSelectionChanged: (s) => ctrl.setSort(s.first),
+                          segments: [
+                            const ButtonSegment(
+                              value: ProductSort.newest,
+                              icon: Icon(Icons.watch_later_outlined, size: 15),
+                              label: Text('Mới'),
+                            ),
+                            const ButtonSegment(
+                              value: ProductSort.priceAsc,
+                              icon: Icon(Icons.trending_up, size: 15),
+                              label: Text('Giá ↑'),
+                            ),
+                            const ButtonSegment(
+                              value: ProductSort.priceDesc,
+                              icon: Icon(Icons.trending_down, size: 15),
+                              label: Text('Giá ↓'),
+                            ),
+                            if (canManage)
+                              const ButtonSegment(
+                                value: ProductSort.stockDesc,
+                                icon: Icon(Icons.inventory_2_outlined, size: 15),
+                                label: Text('Tồn'),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(width: 8),
+                        FilterChip(
+                          label: const Text('Còn hàng'),
+                          selected: ctrl.inStockOnly,
+                          onSelected: ctrl.setInStockOnly,
+                          avatar: Icon(
+                            Icons.check_circle_outline,
+                            size: 16,
+                            color: ctrl.inStockOnly
+                                ? Theme.of(context).colorScheme.primary
+                                : null,
+                          ),
+                        ),
+                        if (ctrl.hasActiveFilters) ...[
+                          const SizedBox(width: 8),
+                          ActionChip(
+                            label: const Text('Xóa bộ lọc'),
+                            avatar: const Icon(Icons.filter_alt_off, size: 16),
+                            onPressed: ctrl.clearFilters,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

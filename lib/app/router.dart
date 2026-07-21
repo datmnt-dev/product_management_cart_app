@@ -64,7 +64,9 @@ GoRouter buildAppRouter(AuthController authController) {
           return AppRoutes.products;
         }
 
-        if (path == AppRoutes.orders && !user.canShop) {
+        if (path == AppRoutes.orders &&
+            !user.canShop &&
+            !user.canManageOrders) {
           return AppRoutes.products;
         }
 

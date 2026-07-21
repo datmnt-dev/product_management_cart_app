@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../core/utils/load_status.dart';
 import '../data/models/cart_item.dart';
 import '../data/models/order_model.dart';
+import '../data/models/product_model.dart';
 import '../data/models/user_model.dart';
 import '../data/services/firestore_database.dart';
 import 'auth_controller.dart';
@@ -86,6 +87,10 @@ class OrderController extends ChangeNotifier {
   Future<OrderModel> checkout({
     required AppUser user,
     required List<CartItem> items,
+    String customerName = '',
+    String phone = '',
+    String shippingAddress = '',
+    String note = '',
   }) async {
     final now = DateTime.now();
     final orderItems = items.map((item) {
@@ -95,6 +100,7 @@ class OrderController extends ChangeNotifier {
         unitPrice: item.product.price,
         quantity: item.quantity,
         imageUrl: item.product.imageUrl,
+        category: item.product.category.key,
       );
     }).toList();
 
@@ -110,6 +116,12 @@ class OrderController extends ChangeNotifier {
       createdAt: now,
       updatedAt: now,
       status: OrderStatus.placed,
+      customerName: customerName.trim().isEmpty
+          ? user.fullName.trim()
+          : customerName.trim(),
+      phone: phone.trim(),
+      shippingAddress: shippingAddress.trim(),
+      note: note.trim(),
       statusHistory: [
         OrderStatusEvent(
           status: OrderStatus.placed,
@@ -186,14 +198,51 @@ class OrderController extends ChangeNotifier {
   }
 
   Future<OrderModel> cancelOrder(OrderModel order, AppUser actor) async {
-    return updateStatus(
-      order: order,
-      next: OrderStatus.cancelled,
-      actor: actor,
-      note: actor.canViewRevenue
-          ? 'Cửa hàng hủy đơn'
-          : 'Khách hủy đơn',
-    );
+    final isStaff = actor.canViewRevenue;
+    if (!OrderTransitions.isValidTransition(
+      from: order.status,
+      to: OrderStatus.cancelled,
+      isStaff: isStaff,
+    )) {
+      throw StateError(
+        'Không thể hủy đơn ở trạng thái ${order.status.label}.',
+      );
+    }
+    if (!isStaff &&
+        order.userEmail.trim().toLowerCase() !=
+            actor.email.trim().toLowerCase()) {
+      throw StateError('Bạn không có quyền hủy đơn này.');
+    }
+
+    _updating = true;
+    notifyListeners();
+    try {
+      return await _database.cancelOrderAtomic(
+        order: order,
+        actorEmail: actor.email,
+        note: isStaff ? 'Cửa hàng hủy đơn' : 'Khách hủy đơn',
+      );
+    } finally {
+      _updating = false;
+      notifyListeners();
+    }
+  }
+
+  /// Count of orders in a status (for staff board badges).
+  int countByStatus(OrderStatus status) {
+    return _orders.where((o) => o.status == status).length;
+  }
+
+  List<OrderModel> ordersByStatus(OrderStatus? status, {String query = ''}) {
+    final q = query.trim().toLowerCase();
+    return _orders.where((o) {
+      if (status != null && o.status != status) return false;
+      if (q.isEmpty) return true;
+      return o.id.toLowerCase().contains(q) ||
+          o.userEmail.toLowerCase().contains(q) ||
+          o.customerName.toLowerCase().contains(q) ||
+          o.phone.contains(q);
+    }).toList();
   }
 
   Future<OrderModel> customerConfirmReceived(

@@ -254,6 +254,92 @@ class FirestoreDatabase {
     return normalized;
   }
 
+  /// Cancel order and restore stock in one transaction (idempotent via stockRestored).
+  Future<OrderModel> cancelOrderAtomic({
+    required OrderModel order,
+    required String actorEmail,
+    required String note,
+  }) async {
+    if (order.status == OrderStatus.cancelled) {
+      throw StateError('Đơn đã bị hủy trước đó.');
+    }
+    if (order.stockRestored) {
+      throw StateError('Đơn này đã hoàn kho trước đó.');
+    }
+
+    final orderRef = _orders.doc(order.id);
+    final productIds = order.items
+        .map((e) => e.productId)
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
+    final when = DateTime.now();
+    final cancelled = order.withStatusTransition(
+      next: OrderStatus.cancelled,
+      byEmail: actorEmail.trim().toLowerCase(),
+      note: note,
+      at: when,
+      stockRestored: true,
+    );
+
+    await _firestore.runTransaction((transaction) async {
+      final orderSnap = await transaction.get(orderRef);
+      if (!orderSnap.exists || orderSnap.data() == null) {
+        throw StateError('Không tìm thấy đơn hàng.');
+      }
+      final live = OrderModel.fromMap({
+        'id': orderSnap.id,
+        ...orderSnap.data()!,
+      });
+      if (live.status == OrderStatus.cancelled || live.stockRestored) {
+        throw StateError('Đơn đã hủy hoặc đã hoàn kho.');
+      }
+
+      final productRefs = <String, DocumentReference<Map<String, dynamic>>>{
+        for (final id in productIds) id: _products.doc(id),
+      };
+      final snapshots = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+      for (final entry in productRefs.entries) {
+        snapshots[entry.key] = await transaction.get(entry.value);
+      }
+
+      // Aggregate qty per product (multi-line same product).
+      final restoreByProduct = <String, int>{};
+      for (final line in live.items) {
+        if (line.productId.isEmpty || line.quantity <= 0) continue;
+        restoreByProduct[line.productId] =
+            (restoreByProduct[line.productId] ?? 0) + line.quantity;
+      }
+
+      for (final entry in restoreByProduct.entries) {
+        final snap = snapshots[entry.key];
+        final data = snap?.data();
+        if (snap == null || !snap.exists || data == null) {
+          // Product removed — skip restock for that line only.
+          continue;
+        }
+        final product = Product.fromMap({'id': snap.id, ...data});
+        transaction.update(productRefs[entry.key]!, {
+          'stockQuantity': product.stockQuantity + entry.value,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Re-build cancelled from live so we don't clobber concurrent edits.
+      final finalCancelled = live.withStatusTransition(
+        next: OrderStatus.cancelled,
+        byEmail: actorEmail.trim().toLowerCase(),
+        note: note,
+        at: when,
+        stockRestored: true,
+      );
+      transaction.set(orderRef, finalCancelled.toMap(), SetOptions(merge: true));
+    });
+
+    return cancelled;
+  }
+
   Stream<List<OrderModel>> watchOrders({String? userEmail}) {
     final Stream<QuerySnapshot<Map<String, dynamic>>> snapshots;
     if (userEmail == null) {

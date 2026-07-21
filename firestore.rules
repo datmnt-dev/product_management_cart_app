@@ -54,6 +54,8 @@ service cloud.firestore {
     match /products/{productId} {
       allow read: if signedIn();
       allow create, delete: if isStaff();
+      // Customer may decrease (checkout) or increase (cancel restock) stock only.
+      // Lab trust model — no Cloud Functions; client only uses these paths.
       allow update: if isStaff()
         || (
           isCustomer()
@@ -62,7 +64,6 @@ service cloud.firestore {
             .hasOnly(['stockQuantity', 'updatedAt'])
           && request.resource.data.stockQuantity is int
           && request.resource.data.stockQuantity >= 0
-          && request.resource.data.stockQuantity < resource.data.stockQuantity
         );
     }
 
@@ -75,7 +76,7 @@ service cloud.firestore {
 
       function onlyStatusFieldsChanged() {
         return request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['status', 'updatedAt', 'statusHistory']);
+          .hasOnly(['status', 'updatedAt', 'statusHistory', 'stockRestored']);
       }
 
       // Customer may cancel early or confirm delivery when shipping.
@@ -87,6 +88,7 @@ service cloud.firestore {
             (
               resource.data.status in ['placed', 'confirmed', 'pending']
               && request.resource.data.status == 'cancelled'
+              && request.resource.data.stockRestored == true
             )
             || (
               resource.data.status == 'shipping'

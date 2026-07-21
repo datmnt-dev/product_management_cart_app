@@ -70,4 +70,27 @@ class Validators {
     }
     return null;
   }
+
+  static String? phone(String? value) {
+    final required = requiredText(value, 'số điện thoại');
+    if (required != null) {
+      return required;
+    }
+    final digits = value!.replaceAll(RegExp(r'[\s\-.]'), '');
+    if (!RegExp(r'^[0-9+]{9,12}$').hasMatch(digits)) {
+      return 'Số điện thoại không hợp lệ (9–12 số).';
+    }
+    return null;
+  }
+
+  static String? shippingAddress(String? value) {
+    final required = requiredText(value, 'địa chỉ giao hàng');
+    if (required != null) {
+      return required;
+    }
+    if (value!.trim().length < 8) {
+      return 'Địa chỉ cần ít nhất 8 ký tự.';
+    }
+    return null;
+  }
 }

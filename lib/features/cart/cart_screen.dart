@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../app/router.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/validators.dart';
 import '../../data/models/cart_item.dart';
 import '../../shared/components/price_text.dart';
 import '../../shared/components/primary_bottom_bar.dart';
@@ -183,53 +184,20 @@ class _CartScreenState extends State<CartScreen> {
     final messenger = ScaffoldMessenger.of(context);
     if (user == null || cart.isEmpty) return;
 
-    final confirmed = await showModalBottomSheet<bool>(
+    final shipping = await showModalBottomSheet<_CheckoutPayload>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.sm,
-            AppSpacing.lg,
-            MediaQuery.paddingOf(ctx).bottom + AppSpacing.lg,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Xác nhận đặt hàng',
-                style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Bạn muốn mua ${cart.totalQuantity} sản phẩm với tổng '
-                '${formatCurrency(cart.totalPrice)}?',
-                style: Theme.of(ctx).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              FilledButton(
-                onPressed: () {
-                  HapticFeedback.mediumImpact();
-                  Navigator.pop(ctx, true);
-                },
-                child: const Text('Xác nhận đặt'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Quay lại'),
-              ),
-            ],
-          ),
+        return _CheckoutSheet(
+          totalQuantity: cart.totalQuantity,
+          totalPrice: cart.totalPrice,
+          defaultName: user.fullName,
         );
       },
     );
 
-    if (confirmed != true || !mounted) return;
+    if (shipping == null || !mounted) return;
 
     setState(() => _checkingOut = true);
 
@@ -237,7 +205,14 @@ class _CartScreenState extends State<CartScreen> {
       final items = List<CartItem>.from(cart.items);
 
       // Stock + order are written in one Firestore transaction (no orphan stock).
-      final order = await orderController.checkout(user: user, items: items);
+      final order = await orderController.checkout(
+        user: user,
+        items: items,
+        customerName: shipping.name,
+        phone: shipping.phone,
+        shippingAddress: shipping.address,
+        note: shipping.note,
+      );
       cart.clear();
 
       if (!context.mounted) return;
@@ -426,6 +401,162 @@ class _CartTile extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CheckoutPayload {
+  const _CheckoutPayload({
+    required this.name,
+    required this.phone,
+    required this.address,
+    required this.note,
+  });
+
+  final String name;
+  final String phone;
+  final String address;
+  final String note;
+}
+
+class _CheckoutSheet extends StatefulWidget {
+  const _CheckoutSheet({
+    required this.totalQuantity,
+    required this.totalPrice,
+    required this.defaultName,
+  });
+
+  final int totalQuantity;
+  final double totalPrice;
+  final String defaultName;
+
+  @override
+  State<_CheckoutSheet> createState() => _CheckoutSheetState();
+}
+
+class _CheckoutSheetState extends State<_CheckoutSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _name;
+  late final TextEditingController _phone;
+  late final TextEditingController _address;
+  late final TextEditingController _note;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = TextEditingController(text: widget.defaultName);
+    _phone = TextEditingController();
+    _address = TextEditingController();
+    _note = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _phone.dispose();
+    _address.dispose();
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        MediaQuery.paddingOf(context).bottom + AppSpacing.lg + bottom,
+      ),
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Thông tin giao hàng',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                '${widget.totalQuantity} sản phẩm · '
+                '${formatCurrency(widget.totalPrice)}',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: _name,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Họ tên người nhận',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                validator: (v) => Validators.requiredText(v, 'họ tên'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Số điện thoại',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+                validator: Validators.phone,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _address,
+                textInputAction: TextInputAction.next,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Địa chỉ giao hàng',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                  alignLabelWithHint: true,
+                ),
+                validator: Validators.shippingAddress,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _note,
+                textInputAction: TextInputAction.done,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Ghi chú (tuỳ chọn)',
+                  prefixIcon: Icon(Icons.sticky_note_2_outlined),
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              FilledButton(
+                onPressed: () {
+                  if (!_formKey.currentState!.validate()) return;
+                  HapticFeedback.mediumImpact();
+                  Navigator.pop(
+                    context,
+                    _CheckoutPayload(
+                      name: _name.text.trim(),
+                      phone: _phone.text.trim(),
+                      address: _address.text.trim(),
+                      note: _note.text.trim(),
+                    ),
+                  );
+                },
+                child: const Text('Xác nhận đặt hàng'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Quay lại'),
+              ),
+            ],
+          ),
         ),
       ),
     );
