@@ -57,7 +57,7 @@ class StatisticsScreen extends StatelessWidget {
 
           final filtered = orders.filteredOrders;
           final revenueOrders = filtered
-              .where((o) => o.status.countsTowardRevenue)
+              .where((o) => o.countsTowardRevenue)
               .toList();
           final width = MediaQuery.sizeOf(context).width;
           final wide = width >= 900;
@@ -124,6 +124,8 @@ class StatisticsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 20),
                   _StatusMixBar(orders: filtered),
+                  const SizedBox(height: 16),
+                  _PaymentSummaryBar(orders: filtered),
                   const SizedBox(height: 20),
                   if (wide)
                     Row(
@@ -159,7 +161,7 @@ class StatisticsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Chỉ tính đơn không bị hủy trong bộ lọc thời gian',
+                    'Chỉ tính đơn đã thanh toán và không bị hủy trong bộ lọc thời gian',
                     style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                   const SizedBox(height: 14),
@@ -414,6 +416,58 @@ class _StatusMixBar extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _PaymentSummaryBar extends StatelessWidget {
+  const _PaymentSummaryBar({required this.orders});
+  final List<OrderModel> orders;
+
+  @override
+  Widget build(BuildContext context) {
+    if (orders.isEmpty) return const SizedBox.shrink();
+    final paidRevenue = orders
+        .where((o) => o.countsTowardRevenue)
+        .fold<double>(0, (sum, order) => sum + order.totalAmount);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest.withValues(alpha: .45),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Thanh toán',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              for (final status in PaymentStatus.values)
+                _LegendChip(
+                  color: status.color,
+                  label:
+                      '${status.shortLabel} ${orders.where((o) => o.paymentStatus == status).length}',
+                ),
+              _LegendChip(
+                color: Theme.of(context).colorScheme.primary,
+                label: 'Doanh thu ${formatCurrency(paidRevenue)}',
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

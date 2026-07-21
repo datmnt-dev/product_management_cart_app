@@ -144,11 +144,73 @@ class OrderExpandableTile extends StatelessWidget {
             _ShippingBlock(order: order),
           ],
           const SizedBox(height: AppSpacing.sm),
+          _PaymentBlock(order: order),
+          const SizedBox(height: AppSpacing.sm),
           OrderTrackingTimeline(order: order),
           if (user != null) ...[
             const SizedBox(height: AppSpacing.md),
             _OrderActions(order: order, user: user, busy: orders.isUpdating),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PaymentBlock extends StatelessWidget {
+  const _PaymentBlock({required this.order});
+  final OrderModel order;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: order.paymentStatus.color.withValues(alpha: .08),
+        borderRadius: AppRadii.borderMd,
+        border: Border.all(
+          color: order.paymentStatus.color.withValues(alpha: .22),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(order.paymentMethod.icon, size: 20, color: cs.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  order.paymentMethod.label,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  order.paymentMethod.description,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: cs.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Chip(
+            avatar: Icon(
+              order.paymentStatus.icon,
+              size: 14,
+              color: order.paymentStatus.color,
+            ),
+            label: Text(order.paymentStatus.shortLabel),
+            visualDensity: VisualDensity.compact,
+          ),
         ],
       ),
     );
@@ -264,6 +326,44 @@ class _OrderActions extends StatelessWidget {
     final actions = <Widget>[];
 
     if (isStaff) {
+      if (order.canStaffMarkPaid) {
+        actions.add(
+          FilledButton.icon(
+            onPressed: busy
+                ? null
+                : () => run(
+                    () => controller.markPaid(order, user),
+                    'Đã xác nhận thanh toán',
+                  ),
+            icon: const Icon(Icons.verified_outlined, size: 18),
+            label: const Text('Xác nhận thanh toán'),
+          ),
+        );
+      }
+      if (order.canStaffRefund) {
+        actions.add(
+          OutlinedButton.icon(
+            onPressed: busy
+                ? null
+                : () async {
+                    final ok = await showConfirmDialog(
+                      context,
+                      title: 'Hoàn tiền đơn hàng?',
+                      message:
+                          'Đơn #${order.id.split('-').last} sẽ chuyển trạng thái thanh toán sang đã hoàn tiền.',
+                      confirmLabel: 'Hoàn tiền',
+                    );
+                    if (!ok || !context.mounted) return;
+                    await run(
+                      () => controller.refundPayment(order, user),
+                      'Đã hoàn tiền đơn hàng',
+                    );
+                  },
+            icon: const Icon(Icons.currency_exchange_outlined, size: 18),
+            label: const Text('Hoàn tiền'),
+          ),
+        );
+      }
       final nextLabel = order.status.nextStaffActionLabel;
       if (nextLabel != null) {
         actions.add(

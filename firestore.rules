@@ -79,6 +79,11 @@ service cloud.firestore {
           .hasOnly(['status', 'updatedAt', 'statusHistory', 'stockRestored']);
       }
 
+      function onlyPaymentFieldsChanged() {
+        return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['paymentStatus', 'updatedAt']);
+      }
+
       // Staff owns store fulfillment: receive, prepare, hand over to shipping.
       // Customer alone confirms actual receipt.
       function staffStatusUpdateOk() {
@@ -126,6 +131,23 @@ service cloud.firestore {
           );
       }
 
+      function staffPaymentUpdateOk() {
+        return isStaff()
+          && onlyPaymentFieldsChanged()
+          && (
+            (
+              resource.data.paymentStatus in ['unpaid', 'pending']
+              && request.resource.data.paymentStatus == 'paid'
+              && resource.data.status != 'cancelled'
+            )
+            || (
+              resource.data.paymentStatus == 'paid'
+              && request.resource.data.paymentStatus == 'refunded'
+              && resource.data.status == 'cancelled'
+            )
+          );
+      }
+
       function emailMatchesAuth() {
         return request.auth.token.email is string
           && request.resource.data.userEmail is string
@@ -150,8 +172,16 @@ service cloud.firestore {
         && request.resource.data.totalAmount > 0
         && request.resource.data.items is list
         && request.resource.data.items.size() > 0
-        && request.resource.data.status == 'placed';
-      allow update: if staffStatusUpdateOk() || customerStatusUpdateOk();
+        && request.resource.data.status == 'placed'
+        && request.resource.data.paymentMethod in [
+          'cash_on_delivery',
+          'bank_transfer',
+          'mock_wallet'
+        ]
+        && request.resource.data.paymentStatus in ['unpaid', 'paid'];
+      allow update: if staffStatusUpdateOk()
+        || customerStatusUpdateOk()
+        || staffPaymentUpdateOk();
       allow delete: if isStaff();
     }
 

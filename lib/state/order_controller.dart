@@ -50,16 +50,16 @@ class OrderController extends ChangeNotifier {
     }).toList();
   }
 
-  /// Revenue excludes cancelled orders.
+  /// Revenue counts paid, non-cancelled orders only.
   double get totalRevenue {
     return _orders
-        .where((o) => o.status.countsTowardRevenue)
+        .where((o) => o.countsTowardRevenue)
         .fold<double>(0, (total, order) => total + order.totalAmount);
   }
 
   double get filteredRevenue {
     return filteredOrders
-        .where((o) => o.status.countsTowardRevenue)
+        .where((o) => o.countsTowardRevenue)
         .fold<double>(0, (total, order) => total + order.totalAmount);
   }
 
@@ -93,6 +93,7 @@ class OrderController extends ChangeNotifier {
     String phone = '',
     String shippingAddress = '',
     String note = '',
+    PaymentMethod paymentMethod = PaymentMethod.cashOnDelivery,
   }) async {
     final now = DateTime.now();
     final orderItems = items.map((item) {
@@ -124,6 +125,10 @@ class OrderController extends ChangeNotifier {
       phone: phone.trim(),
       shippingAddress: shippingAddress.trim(),
       note: note.trim(),
+      paymentMethod: paymentMethod,
+      paymentStatus: paymentMethod == PaymentMethod.mockWallet
+          ? PaymentStatus.paid
+          : PaymentStatus.unpaid,
       statusHistory: [
         OrderStatusEvent(
           status: OrderStatus.placed,
@@ -222,6 +227,46 @@ class OrderController extends ChangeNotifier {
         actorEmail: actor.email,
         note: isStaff ? 'Cửa hàng hủy đơn' : 'Khách hủy đơn',
       );
+    } finally {
+      _updating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<OrderModel> markPaid(OrderModel order, AppUser staff) async {
+    if (!staff.canManageOrders) {
+      throw StateError('Bạn không có quyền xác nhận thanh toán.');
+    }
+    if (!order.canStaffMarkPaid) {
+      throw StateError('Không thể xác nhận thanh toán cho đơn này.');
+    }
+
+    final updated = order.copyWith(paymentStatus: PaymentStatus.paid);
+    _updating = true;
+    notifyListeners();
+    try {
+      await _database.saveOrder(updated);
+      return updated;
+    } finally {
+      _updating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<OrderModel> refundPayment(OrderModel order, AppUser staff) async {
+    if (!staff.canManageOrders) {
+      throw StateError('Bạn không có quyền hoàn tiền.');
+    }
+    if (!order.canStaffRefund) {
+      throw StateError('Chỉ hoàn tiền cho đơn đã thanh toán và đã hủy.');
+    }
+
+    final updated = order.copyWith(paymentStatus: PaymentStatus.refunded);
+    _updating = true;
+    notifyListeners();
+    try {
+      await _database.saveOrder(updated);
+      return updated;
     } finally {
       _updating = false;
       notifyListeners();
