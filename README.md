@@ -42,6 +42,7 @@ App dùng `StatefulShellRoute` + bottom `NavigationBar` (rail trên màn rộng)
 - Giỏ hàng **persist** theo user (SharedPreferences) + clamp theo tồn kho live.
 - Checkout atomic: trừ kho + tạo đơn; form **họ tên / SĐT / địa chỉ / ghi chú**.
 - Payment phase 1: chọn COD / chuyển khoản / ví mock; lưu `paymentMethod` + `paymentStatus`.
+- Coupon phase 2: áp mã giảm giá tại checkout; validate ngày hiệu lực, lượt dùng, đơn tối thiểu.
 - Tracking: `placed → confirmed → preparing → shipping → delivered` (+ `cancelled`).
 - **Hủy đơn hoàn kho** (transaction + `stockRestored`).
 - Customer: lịch sử đơn và xác nhận đã nhận khi đơn ở trạng thái `shipping`.
@@ -62,7 +63,7 @@ firebase deploy --only firestore:rules --project product-management-cart-app
 node tools\verify_firestore_seed.js
 ```
 
-Seed: 4 users, 10 products, 9 orders, 1 `seedRuns` document (đủ edge case demo).
+Seed: 4 users, 10 products, 3 coupons, 9 orders, 1 `seedRuns` document (đủ edge case demo).
 
 ## Chạy app
 

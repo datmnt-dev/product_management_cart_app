@@ -139,6 +139,10 @@ class OrderExpandableTile extends StatelessWidget {
               ),
             ),
           ),
+          if (order.hasDiscount) ...[
+            const SizedBox(height: AppSpacing.xs),
+            _DiscountBlock(order: order),
+          ],
           if (order.hasShippingInfo || order.customerName.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
             _ShippingBlock(order: order),
@@ -153,6 +157,75 @@ class OrderExpandableTile extends StatelessWidget {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _DiscountBlock extends StatelessWidget {
+  const _DiscountBlock({required this.order});
+  final OrderModel order;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green.withValues(alpha: .08),
+        borderRadius: AppRadii.borderMd,
+      ),
+      child: Column(
+        children: [
+          _row('Tạm tính', formatCurrency(order.effectiveSubtotal), cs),
+          const SizedBox(height: 4),
+          _row(
+            'Mã ${order.couponCode}',
+            '-${formatCurrency(order.discountAmount)}',
+            cs,
+            color: Colors.green,
+          ),
+          const Divider(height: 14),
+          _row(
+            'Thanh toán',
+            formatCurrency(order.totalAmount),
+            cs,
+            strong: true,
+            color: cs.primary,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(
+    String label,
+    String value,
+    ColorScheme cs, {
+    bool strong = false,
+    Color? color,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: strong ? FontWeight.w900 : FontWeight.w700,
+              color: cs.onSurface,
+            ),
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+            color: color ?? cs.onSurface,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -30,7 +30,7 @@ async function main() {
   }
 
   const counts = {};
-  for (const collection of ["users", "products", "orders", "seedRuns"]) {
+  for (const collection of ["users", "products", "coupons", "orders", "seedRuns"]) {
     counts[collection] = await countCollection(collection, auth.idToken);
   }
   console.log(JSON.stringify(counts, null, 2));
