@@ -24,6 +24,7 @@ class AppUser {
   bool get canShop => role.canShop;
   bool get canViewRevenue => role.canViewRevenue;
   bool get canManageOrders => role.canManageOrders;
+  bool get isStaff => role.isStaff;
   bool get canViewRoleMatrix => role.canViewRoleMatrix;
 
   Map<String, dynamic> toMap() {

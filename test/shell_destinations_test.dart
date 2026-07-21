@@ -34,7 +34,7 @@ void main() {
         ShellBranches.statistics,
       ]);
       expect(dests.length, 3);
-      expect(dests[1].label, 'Đơn');
+      expect(dests[1].label, 'Điều phối');
     });
 
     test('admin has store, order board, statistics, roles (4 tabs)', () {
@@ -46,6 +46,11 @@ void main() {
         ShellBranches.roles,
       ]);
       expect(dests.length, 4);
+      // Admin = system owner: order board of ALL orders, not shopping cart.
+      expect(dests.any((d) => d.branchIndex == ShellBranches.cart), isFalse);
+      expect(dests[1].label, 'Điều phối');
+      expect(_user(AppRole.admin).canManageOrders, isTrue);
+      expect(_user(AppRole.admin).canShop, isFalse);
     });
 
     test('branch indexes are fixed constants', () {

@@ -8,6 +8,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/load_status.dart';
 import '../../data/models/order_model.dart';
+import '../../data/models/user_role.dart';
 import '../../shared/components/order_expandable_tile.dart';
 import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/app_loading_state.dart';
@@ -15,7 +16,9 @@ import '../../shared/widgets/empty_state.dart';
 import '../../state/auth_controller.dart';
 import '../../state/order_controller.dart';
 
-/// Customer: personal order history. Staff: operational order board.
+/// Role-aware orders entry:
+/// - Customer: only own history
+/// - Manager / Admin: board of ALL store orders (system ops; admin = full system)
 class OrderHistoryScreen extends StatelessWidget {
   const OrderHistoryScreen({super.key});
 
@@ -23,7 +26,7 @@ class OrderHistoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = context.watch<AuthController>().currentUser;
     if (user != null && user.canManageOrders) {
-      return const _StaffOrderBoard();
+      return _StaffOrderBoard(isAdmin: user.role == AppRole.admin);
     }
     return const _CustomerOrderHistory();
   }
@@ -209,7 +212,9 @@ class _MiniStat extends StatelessWidget {
 // ── Staff board ───────────────────────────────────────────────────────────────
 
 class _StaffOrderBoard extends StatefulWidget {
-  const _StaffOrderBoard();
+  const _StaffOrderBoard({required this.isAdmin});
+
+  final bool isAdmin;
 
   @override
   State<_StaffOrderBoard> createState() => _StaffOrderBoardState();
@@ -228,11 +233,20 @@ class _StaffOrderBoardState extends State<_StaffOrderBoard> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final title = widget.isAdmin
+        ? 'Điều phối đơn · Toàn hệ thống'
+        : 'Bảng điều phối đơn';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Bảng điều phối đơn'),
+        title: Text(title),
         actions: [
+          if (widget.isAdmin)
+            IconButton(
+              tooltip: 'Ma trận phân quyền',
+              onPressed: () => context.go(AppRoutes.roles),
+              icon: const Icon(Icons.shield_outlined),
+            ),
           IconButton(
             tooltip: 'Thống kê doanh thu',
             onPressed: () => context.go(AppRoutes.statistics),

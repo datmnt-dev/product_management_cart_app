@@ -45,11 +45,12 @@ List<ShellDestination> destinationsFor(AppUser user) {
         icon: Icons.shopping_bag_outlined,
         selectedIcon: Icons.shopping_bag,
       ),
+    // Customer: own orders. Admin/Manager: system order board (all customers).
     if (user.canShop || user.canManageOrders)
-      const ShellDestination(
+      ShellDestination(
         branchIndex: ShellBranches.orders,
-        // Keep short for NavigationBar (4 tabs on admin); screen title is longer.
-        label: 'Đơn',
+        // Short labels for nav; screens use full titles.
+        label: user.canManageOrders ? 'Điều phối' : 'Đơn',
         icon: Icons.receipt_long_outlined,
         selectedIcon: Icons.receipt_long,
       ),

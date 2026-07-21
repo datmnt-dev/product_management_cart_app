@@ -243,27 +243,35 @@ class _RolePermissionsCard extends StatelessWidget {
             ),
             const Divider(height: 24),
             _AccessRow(
-              label: 'Xem danh sách & Chi tiết sản phẩm',
+              label: 'Xem danh sách & chi tiết sản phẩm',
               allowed: true,
             ),
             _AccessRow(
-              label: 'Quản lý kho hàng (Thêm & Sửa sản phẩm)',
+              label: 'Quản lý kho (thêm / sửa sản phẩm)',
               allowed: role.canManageProducts,
             ),
             _AccessRow(
-              label: 'Xóa sản phẩm khỏi hệ thống',
+              label: 'Xóa sản phẩm',
               allowed: role.canDeleteProducts,
             ),
             _AccessRow(
-              label: 'Mua sắm & Đặt hàng (Shopping Cart)',
+              label: 'Mua sắm & checkout (giỏ hàng)',
               allowed: role.canShop,
             ),
             _AccessRow(
-              label: 'Xem thống kê doanh thu toàn hệ thống',
+              label: 'Xem lịch sử đơn của chính mình',
+              allowed: role.canShop,
+            ),
+            _AccessRow(
+              label: 'Điều phối MỌI đơn hàng (toàn hệ thống)',
+              allowed: role.canManageOrders,
+            ),
+            _AccessRow(
+              label: 'Thống kê / doanh thu toàn hệ thống',
               allowed: role.canViewRevenue,
             ),
             _AccessRow(
-              label: 'Truy cập ma trận bảo mật',
+              label: 'Ma trận phân quyền (chỉ Admin)',
               allowed: role.canViewRoleMatrix,
             ),
           ],
