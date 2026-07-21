@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../models/coupon_model.dart';
+import '../models/inventory_movement.dart';
 import '../models/order_model.dart';
 import '../models/product_model.dart';
 import '../models/user_model.dart';
@@ -31,6 +32,8 @@ class FirestoreDatabase {
       _firestore.collection('orders');
   CollectionReference<Map<String, dynamic>> get _coupons =>
       _firestore.collection('coupons');
+  CollectionReference<Map<String, dynamic>> get _inventoryMovements =>
+      _firestore.collection('inventoryMovements');
 
   User? get firebaseUser => _auth.currentUser;
 
@@ -202,6 +205,71 @@ class FirestoreDatabase {
 
   Future<void> deleteProduct(String id) async {
     await _products.doc(id).delete();
+  }
+
+  Stream<List<InventoryMovement>> watchInventoryMovements(String productId) =>
+      _inventoryMovements
+          .where('productId', isEqualTo: productId)
+          .orderBy('createdAt', descending: true)
+          .limit(20)
+          .snapshots()
+          .map(
+            (snapshot) => snapshot.docs
+                .map(
+                  (doc) =>
+                      InventoryMovement.fromMap({'id': doc.id, ...doc.data()}),
+                )
+                .toList(),
+          );
+
+  Future<void> adjustStock({
+    required Product product,
+    required int quantityDelta,
+    required InventoryMovementType type,
+    required String note,
+  }) async {
+    if (quantityDelta == 0) {
+      throw StateError('Số lượng điều chỉnh phải khác 0.');
+    }
+    final email = _auth.currentUser?.email?.trim().toLowerCase();
+    if (email == null || email.isEmpty) {
+      throw StateError('Vui lòng đăng nhập lại.');
+    }
+    final productRef = _products.doc(product.id);
+    final movementRef = _inventoryMovements.doc();
+    await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(productRef);
+      final data = snapshot.data();
+      if (!snapshot.exists || data == null) {
+        throw StateError('Sản phẩm không còn tồn tại.');
+      }
+      final current = Product.fromMap({'id': snapshot.id, ...data});
+      final after = current.stockQuantity + quantityDelta;
+      if (after < 0) {
+        throw StateError(
+          'Tồn kho không thể âm (hiện có ${current.stockQuantity}).',
+        );
+      }
+      transaction.update(productRef, {
+        'stockQuantity': after,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      transaction.set(
+        movementRef,
+        InventoryMovement(
+          id: movementRef.id,
+          productId: current.id,
+          productName: current.name,
+          type: type,
+          quantityDelta: quantityDelta,
+          stockBefore: current.stockQuantity,
+          stockAfter: after,
+          note: note.trim(),
+          byEmail: email,
+          createdAt: DateTime.now(),
+        ).toMap(),
+      );
+    });
   }
 
   Future<AppliedCoupon> previewCoupon({

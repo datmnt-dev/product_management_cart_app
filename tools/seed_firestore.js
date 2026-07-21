@@ -231,6 +231,11 @@ const coupons = [
   },
 ];
 
+const inventoryMovements = [
+  { id: 'seed-stock-restock-headphone', productId: 'seed-headphone', productName: 'Breeze ANC Headphone', type: 'restock', quantityDelta: 8, stockBefore: 10, stockAfter: 18, note: 'Nhập lô demo tháng này', byEmail: 'manager@store.local', createdAt: daysAgo(3) },
+  { id: 'seed-stock-adjustment-laptop', productId: 'seed-gaming-laptop-low-stock', productName: 'Rift Gaming Laptop', type: 'adjustment', quantityDelta: -1, stockBefore: 2, stockAfter: 1, note: 'Loại hàng trưng bày lỗi', byEmail: 'admin@store.local', createdAt: daysAgo(1) },
+];
+
 const orderTemplates = [
   {
     id: "seed-order-today-mixed",
@@ -484,6 +489,11 @@ async function main() {
     await writeDocument(`coupons/${coupon.code}`, admin.idToken, coupon);
   }
 
+  console.log("Writing Firestore inventory movements...");
+  for (const movement of inventoryMovements) {
+    await writeDocument(`inventoryMovements/${movement.id}`, admin.idToken, movement);
+  }
+
   console.log("Writing Firestore orders...");
   for (const order of orderTemplates.map(buildOrder)) {
     await writeDocument(`orders/${order.id}`, admin.idToken, order);
@@ -495,6 +505,7 @@ async function main() {
     accountCount: seededAccounts.length,
     productCount: products.length,
     couponCount: coupons.length,
+    inventoryMovementCount: inventoryMovements.length,
     orderCount: orderTemplates.length,
     notes: "Seed data covers auth roles, product CRUD states, cart stock edges, checkout history, coupons, payments, and revenue filters.",
   });

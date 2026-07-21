@@ -9,6 +9,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/load_status.dart';
 import '../../data/models/product_model.dart';
+import '../../data/models/inventory_movement.dart';
 import '../../shared/components/cart_badge_icon.dart';
 import '../../shared/components/price_text.dart';
 import '../../shared/components/primary_bottom_bar.dart';
@@ -159,11 +160,25 @@ class _DetailContent extends StatelessWidget {
 
           if (user.canManageProducts) {
             return PrimaryBottomBar(
-              child: FilledButton.icon(
-                onPressed: () =>
-                    context.go(AppRoutes.editProductDetails(product.id)),
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Cập nhật sản phẩm'),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showStockAdjustment(context, product),
+                      icon: const Icon(Icons.add_box_outlined),
+                      label: const Text('Điều chỉnh kho'),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: () =>
+                          context.go(AppRoutes.editProductDetails(product.id)),
+                      icon: const Icon(Icons.edit_outlined),
+                      label: const Text('Cập nhật'),
+                    ),
+                  ),
+                ],
               ),
             );
           }
@@ -379,6 +394,108 @@ class _DetailContent extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _showStockAdjustment(
+    BuildContext context,
+    Product product,
+  ) async {
+    final quantity = TextEditingController();
+    final note = TextEditingController();
+    var type = InventoryMovementType.restock;
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setState) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.lg,
+            AppSpacing.lg,
+            MediaQuery.viewInsetsOf(context).bottom + AppSpacing.lg,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Điều chỉnh tồn kho',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text('Tồn hiện tại: ${product.stockQuantity}'),
+              const SizedBox(height: AppSpacing.md),
+              SegmentedButton<InventoryMovementType>(
+                segments: const [
+                  ButtonSegment(
+                    value: InventoryMovementType.restock,
+                    label: Text('Nhập hàng'),
+                  ),
+                  ButtonSegment(
+                    value: InventoryMovementType.adjustment,
+                    label: Text('Điều chỉnh'),
+                  ),
+                ],
+                selected: {type},
+                onSelectionChanged: (value) =>
+                    setState(() => type = value.first),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextField(
+                controller: quantity,
+                keyboardType: const TextInputType.numberWithOptions(
+                  signed: true,
+                ),
+                decoration: const InputDecoration(
+                  labelText: 'Số lượng thay đổi',
+                  hintText: 'Ví dụ: 10 hoặc -2',
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextField(
+                controller: note,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Ghi chú (tuỳ chọn)',
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              FilledButton(
+                onPressed: () async {
+                  final delta = int.tryParse(quantity.text.trim());
+                  if (delta == null || delta == 0) {
+                    return;
+                  }
+                  try {
+                    await sheetContext.read<ProductController>().adjustStock(
+                      product: product,
+                      quantityDelta: delta,
+                      type: type,
+                      note: note.text,
+                    );
+                    if (sheetContext.mounted) {
+                      Navigator.pop(sheetContext);
+                    }
+                  } catch (error) {
+                    if (sheetContext.mounted) {
+                      ScaffoldMessenger.of(sheetContext).showSnackBar(
+                        SnackBar(
+                          content: Text(error.toString()),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Lưu biến động'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    quantity.dispose();
+    note.dispose();
   }
 }
 
