@@ -5,6 +5,7 @@ import '../features/auth/login_screen.dart';
 import '../features/auth/register_screen.dart';
 import '../features/cart/cart_screen.dart';
 import '../features/coupons/coupon_management_screen.dart';
+import '../features/orders/seller_fulfillment_screen.dart';
 import '../features/orders/order_history_screen.dart';
 import '../features/products/product_detail_screen.dart';
 import '../features/products/product_form_screen.dart';
@@ -28,6 +29,7 @@ class AppRoutes {
   static const statistics = '/statistics';
   static const roles = '/roles';
   static const coupons = '/coupons';
+  static const fulfillments = '/seller-fulfillments';
 
   static String productDetails(String id) => '/products/$id';
 
@@ -80,11 +82,19 @@ GoRouter buildAppRouter(AuthController authController) {
         if (path == AppRoutes.coupons && !user.canManageProducts) {
           return AppRoutes.products;
         }
+        if (path == AppRoutes.fulfillments && !user.isSeller) {
+          return AppRoutes.products;
+        }
       }
 
       return null;
     },
     routes: [
+      GoRoute(
+        path: AppRoutes.fulfillments,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SellerFulfillmentScreen(),
+      ),
       GoRoute(
         path: AppRoutes.coupons,
         parentNavigatorKey: rootNavigatorKey,
