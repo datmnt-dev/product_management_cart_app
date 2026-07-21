@@ -154,9 +154,7 @@ GoRouter buildAppRouter(AuthController authController) {
         path: AppRoutes.editProduct,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
-          return ProductFormScreen(
-            productId: state.pathParameters['id'] ?? '',
-          );
+          return ProductFormScreen(productId: state.pathParameters['id'] ?? '');
         },
       ),
       GoRoute(

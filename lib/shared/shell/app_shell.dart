@@ -14,26 +14,45 @@ class AppShell extends StatelessWidget {
 
   final StatefulNavigationShell navigationShell;
 
-  static const double _railBreakpoint = 600;
+  /// Prefer bottom nav on phone/tablet; rail on desktop web.
+  static const double _railBreakpoint = 840;
 
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthController>().currentUser;
     if (user == null) {
-      // Redirect should prevent this; fail soft.
       return const Scaffold(body: SizedBox.shrink());
     }
 
+    return _ShellChrome(navigationShell: navigationShell, user: user);
+  }
+}
+
+class _ShellChrome extends StatelessWidget {
+  const _ShellChrome({required this.navigationShell, required this.user});
+
+  final StatefulNavigationShell navigationShell;
+  final AppUser user;
+
+  @override
+  Widget build(BuildContext context) {
     final visible = destinationsFor(user);
     var selected = visible.indexWhere(
       (d) => d.branchIndex == navigationShell.currentIndex,
     );
-    if (selected < 0) {
-      selected = 0;
-    }
+    if (selected < 0) selected = 0;
 
     final width = MediaQuery.sizeOf(context).width;
-    final useRail = width >= _railBreakpoint;
+    final useRail = width >= AppShell._railBreakpoint;
+
+    void onSelect(int visibleIndex) {
+      HapticFeedback.selectionClick();
+      final dest = visible[visibleIndex];
+      navigationShell.goBranch(
+        dest.branchIndex,
+        initialLocation: visibleIndex == selected,
+      );
+    }
 
     if (useRail) {
       return Scaffold(
@@ -41,7 +60,7 @@ class AppShell extends StatelessWidget {
           children: [
             NavigationRail(
               selectedIndex: selected,
-              onDestinationSelected: (i) => _onSelect(i, visible, selected),
+              onDestinationSelected: onSelect,
               labelType: width >= 1024
                   ? NavigationRailLabelType.all
                   : NavigationRailLabelType.selected,
@@ -65,7 +84,7 @@ class AppShell extends StatelessWidget {
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: selected,
-        onDestinationSelected: (i) => _onSelect(i, visible, selected),
+        onDestinationSelected: onSelect,
         destinations: [
           for (final d in visible)
             NavigationDestination(
@@ -78,19 +97,6 @@ class AppShell extends StatelessWidget {
     );
   }
 
-  void _onSelect(
-    int visibleIndex,
-    List<ShellDestination> visible,
-    int currentSelected,
-  ) {
-    HapticFeedback.selectionClick();
-    final dest = visible[visibleIndex];
-    navigationShell.goBranch(
-      dest.branchIndex,
-      initialLocation: visibleIndex == currentSelected,
-    );
-  }
-
   Widget _destinationIcon(
     BuildContext context,
     ShellDestination d, {
@@ -98,19 +104,16 @@ class AppShell extends StatelessWidget {
   }) {
     final icon = Icon(selected ? d.selectedIcon : d.icon);
 
-    // Cart badge for shoppers
     if (d.branchIndex == ShellBranches.cart) {
       return Consumer<CartController>(
         builder: (context, cart, _) {
           final count = cart.totalQuantity;
           if (count <= 0) return icon;
-          return Badge(
-            label: Text(count > 99 ? '99+' : '$count'),
-            child: icon,
-          );
+          return Badge(label: Text(count > 99 ? '99+' : '$count'), child: icon);
         },
       );
     }
+
     return icon;
   }
 }

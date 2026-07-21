@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,18 +26,37 @@ Future<void> main() async {
 
   await authController.bootstrap();
 
+  final cartController = CartController(preferences: preferences);
+  final productController = ProductController(database, authController);
+  final orderController = OrderController(database, authController);
+
+  void syncCart() {
+    final email = authController.currentUser?.email;
+    if (email == null) {
+      cartController.clearForLogout();
+    } else {
+      cartController.bindUser(email, productController.products);
+    }
+  }
+
+  authController.addListener(syncCart);
+  productController.addListener(syncCart);
+  syncCart();
+
+  if (kDebugMode) {
+    debugPrint('StoreFlow boot OK — MultiProvider (no OrderAlert in tree)');
+  }
+
   runApp(
     MultiProvider(
       providers: [
         Provider<FirestoreDatabase>.value(value: database),
         ChangeNotifierProvider<AuthController>.value(value: authController),
-        ChangeNotifierProvider(
-          create: (_) => ProductController(database, authController),
+        ChangeNotifierProvider<ProductController>.value(
+          value: productController,
         ),
-        ChangeNotifierProvider(create: (_) => CartController()),
-        ChangeNotifierProvider(
-          create: (_) => OrderController(database, authController),
-        ),
+        ChangeNotifierProvider<CartController>.value(value: cartController),
+        ChangeNotifierProvider<OrderController>.value(value: orderController),
       ],
       child: ProductLabApp(authController: authController),
     ),

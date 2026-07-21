@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../models/order_model.dart';
 import '../models/product_model.dart';
@@ -7,12 +8,18 @@ import '../models/user_model.dart';
 import '../models/user_role.dart';
 
 class FirestoreDatabase {
-  FirestoreDatabase({FirebaseAuth? auth, FirebaseFirestore? firestore})
-    : _auth = auth ?? FirebaseAuth.instance,
-      _firestore = firestore ?? FirebaseFirestore.instance;
+  FirestoreDatabase({
+    FirebaseAuth? auth,
+    FirebaseFirestore? firestore,
+    GoogleSignIn? googleSignIn,
+  }) : _auth = auth ?? FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance,
+       _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
+  final GoogleSignIn _googleSignIn;
+  var _googleInitialized = false;
 
   CollectionReference<Map<String, dynamic>> get _users =>
       _firestore.collection('users');
@@ -96,7 +103,59 @@ class FirestoreDatabase {
     return appUser;
   }
 
-  Future<void> logout() => _auth.signOut();
+  Future<AppUser> signInWithGoogle() async {
+    if (!_googleInitialized) {
+      await _googleSignIn.initialize();
+      _googleInitialized = true;
+    }
+
+    final googleAccount = await _googleSignIn.authenticate();
+    final idToken = googleAccount.authentication.idToken;
+    if (idToken == null || idToken.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'missing-google-id-token',
+        message: 'Không lấy được Google ID token.',
+      );
+    }
+
+    final credential = GoogleAuthProvider.credential(idToken: idToken);
+    final userCredential = await _auth.signInWithCredential(credential);
+    final firebaseUser = userCredential.user!;
+
+    final existing = await getUserById(firebaseUser.uid);
+    if (existing != null) {
+      return existing;
+    }
+
+    final email = firebaseUser.email?.trim().toLowerCase();
+    if (email == null || email.isEmpty) {
+      await _auth.signOut();
+      throw FirebaseAuthException(
+        code: 'missing-google-email',
+        message: 'Tài khoản Google không có email hợp lệ.',
+      );
+    }
+
+    final appUser = AppUser(
+      id: firebaseUser.uid,
+      fullName: firebaseUser.displayName?.trim().isNotEmpty == true
+          ? firebaseUser.displayName!.trim()
+          : email.split('@').first,
+      email: email,
+      passwordHash: '',
+      role: AppRole.customer,
+      createdAt: DateTime.now(),
+    );
+    await saveUser(appUser);
+    return appUser;
+  }
+
+  Future<void> logout() async {
+    await _auth.signOut();
+    if (_googleInitialized) {
+      await _googleSignIn.signOut();
+    }
+  }
 
   Future<void> saveUser(AppUser user) async {
     await _users.doc(user.id).set(user.toMap(), SetOptions(merge: true));
@@ -133,10 +192,9 @@ class FirestoreDatabase {
   Future<bool> reduceStock(Map<String, int> quantitiesByProductId) async {
     try {
       await _firestore.runTransaction((transaction) async {
-        final productRefs = quantitiesByProductId.map((id, quantity) {
-          return MapEntry(id, _products.doc(id));
-        });
-
+        final productRefs = <String, DocumentReference<Map<String, dynamic>>>{
+          for (final id in quantitiesByProductId.keys) id: _products.doc(id),
+        };
         final snapshots = <String, DocumentSnapshot<Map<String, dynamic>>>{};
         for (final entry in productRefs.entries) {
           snapshots[entry.key] = await transaction.get(entry.value);
@@ -173,6 +231,190 @@ class FirestoreDatabase {
     } catch (_) {
       return false;
     }
+  }
+
+  /// Atomically reduce stock and create the order.
+  ///
+  /// Prevents the inconsistent state where stock is reduced but order write fails.
+  Future<OrderModel> placeOrderAtomic({
+    required OrderModel order,
+    required Map<String, int> quantitiesByProductId,
+  }) async {
+    final authEmail = _auth.currentUser?.email?.trim().toLowerCase();
+    if (authEmail == null || authEmail.isEmpty) {
+      throw StateError(
+        'Phiên đăng nhập không có email. Vui lòng đăng nhập lại.',
+      );
+    }
+
+    // Always bind order to Auth token email (rules compare against token.email).
+    final normalized = order.copyWith(
+      userEmail: authEmail,
+      statusHistory: order.statusHistory
+          .map(
+            (e) => OrderStatusEvent(
+              status: e.status,
+              at: e.at,
+              byEmail: e.byEmail.trim().isEmpty
+                  ? authEmail
+                  : e.byEmail.trim().toLowerCase(),
+              note: e.note,
+            ),
+          )
+          .toList(),
+    );
+
+    final orderRef = _orders.doc(normalized.id);
+    late OrderModel committedOrder;
+
+    await _firestore.runTransaction((transaction) async {
+      // All reads first (Firestore transaction requirement).
+      final productRefs = <String, DocumentReference<Map<String, dynamic>>>{
+        for (final id in quantitiesByProductId.keys) id: _products.doc(id),
+      };
+      final snapshots = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+      for (final entry in productRefs.entries) {
+        snapshots[entry.key] = await transaction.get(entry.value);
+      }
+
+      for (final entry in quantitiesByProductId.entries) {
+        final snapshot = snapshots[entry.key];
+        final data = snapshot?.data();
+        if (snapshot == null || !snapshot.exists || data == null) {
+          throw StateError('Sản phẩm không tồn tại (${entry.key}).');
+        }
+        final product = Product.fromMap({'id': snapshot.id, ...data});
+        if (!product.canBePurchased ||
+            product.stockQuantity < entry.value ||
+            entry.value <= 0) {
+          throw StateError(
+            'Không đủ tồn kho cho "${product.name}" '
+            '(còn ${product.stockQuantity}, cần ${entry.value}).',
+          );
+        }
+      }
+
+      final liveLines = <OrderLine>[];
+      for (final entry in quantitiesByProductId.entries) {
+        final ref = productRefs[entry.key]!;
+        final snapshot = snapshots[entry.key]!;
+        final product = Product.fromMap({
+          'id': snapshot.id,
+          ...snapshot.data()!,
+        });
+        liveLines.add(
+          OrderLine(
+            productId: product.id,
+            name: product.name,
+            unitPrice: product.price,
+            quantity: entry.value,
+            imageUrl: product.imageUrl,
+            category: product.category.key,
+          ),
+        );
+        transaction.update(ref, {
+          'stockQuantity': product.stockQuantity - entry.value,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      final liveTotal = liveLines.fold<double>(
+        0,
+        (total, item) => total + item.totalPrice,
+      );
+      committedOrder = normalized.copyWith(
+        items: liveLines,
+        totalAmount: liveTotal,
+      );
+      transaction.set(orderRef, committedOrder.toMap());
+    });
+
+    return committedOrder;
+  }
+
+  /// Cancel order and restore stock in one transaction (idempotent via stockRestored).
+  Future<OrderModel> cancelOrderAtomic({
+    required OrderModel order,
+    required String actorEmail,
+    required String note,
+  }) async {
+    if (order.status == OrderStatus.cancelled) {
+      throw StateError('Đơn đã bị hủy trước đó.');
+    }
+    if (order.stockRestored) {
+      throw StateError('Đơn này đã hoàn kho trước đó.');
+    }
+
+    final orderRef = _orders.doc(order.id);
+    final productIds = order.items
+        .map((e) => e.productId)
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+
+    final when = DateTime.now();
+    late OrderModel committedOrder;
+
+    await _firestore.runTransaction((transaction) async {
+      final orderSnap = await transaction.get(orderRef);
+      if (!orderSnap.exists || orderSnap.data() == null) {
+        throw StateError('Không tìm thấy đơn hàng.');
+      }
+      final live = OrderModel.fromMap({
+        'id': orderSnap.id,
+        ...orderSnap.data()!,
+      });
+      if (live.status == OrderStatus.cancelled || live.stockRestored) {
+        throw StateError('Đơn đã hủy hoặc đã hoàn kho.');
+      }
+
+      final productRefs = <String, DocumentReference<Map<String, dynamic>>>{
+        for (final id in productIds) id: _products.doc(id),
+      };
+      final snapshots = <String, DocumentSnapshot<Map<String, dynamic>>>{};
+      for (final entry in productRefs.entries) {
+        snapshots[entry.key] = await transaction.get(entry.value);
+      }
+
+      // Aggregate qty per product (multi-line same product).
+      final restoreByProduct = <String, int>{};
+      for (final line in live.items) {
+        if (line.productId.isEmpty || line.quantity <= 0) continue;
+        restoreByProduct[line.productId] =
+            (restoreByProduct[line.productId] ?? 0) + line.quantity;
+      }
+
+      for (final entry in restoreByProduct.entries) {
+        final snap = snapshots[entry.key];
+        final data = snap?.data();
+        if (snap == null || !snap.exists || data == null) {
+          // Product removed — skip restock for that line only.
+          continue;
+        }
+        final product = Product.fromMap({'id': snap.id, ...data});
+        transaction.update(productRefs[entry.key]!, {
+          'stockQuantity': product.stockQuantity + entry.value,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Re-build cancelled from live so we don't clobber concurrent edits.
+      final finalCancelled = live.withStatusTransition(
+        next: OrderStatus.cancelled,
+        byEmail: actorEmail.trim().toLowerCase(),
+        note: note,
+        at: when,
+        stockRestored: true,
+      );
+      committedOrder = finalCancelled;
+      transaction.set(
+        orderRef,
+        finalCancelled.toMap(),
+        SetOptions(merge: true),
+      );
+    });
+
+    return committedOrder;
   }
 
   Stream<List<OrderModel>> watchOrders({String? userEmail}) {

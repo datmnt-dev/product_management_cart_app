@@ -6,6 +6,7 @@ import '../../app/router.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/utils/validators.dart';
 import '../../data/models/user_role.dart';
+import '../../shared/widgets/google_sign_in_button.dart';
 import '../../state/auth_controller.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -45,6 +46,27 @@ class _LoginScreenState extends State<LoginScreen> {
     final result = await context.read<AuthController>().login(
       email: _emailController.text,
       password: _passwordController.text,
+      rememberMe: _rememberMe,
+    );
+
+    if (!mounted) return;
+
+    setState(() => _isSubmitting = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    if (result.success) {
+      context.go(AppRoutes.products);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isSubmitting = true);
+    final result = await context.read<AuthController>().signInWithGoogle(
       rememberMe: _rememberMe,
     );
 
@@ -167,7 +189,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     width: 46,
                                     height: 46,
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: .18),
+                                      color: Colors.white.withValues(
+                                        alpha: .18,
+                                      ),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Icon(
@@ -347,6 +371,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                     Text('Đăng nhập'),
                                   ],
                                 ),
+                        ),
+                        const SizedBox(height: 12),
+                        GoogleSignInButton(
+                          onPressed: _isSubmitting ? null : _signInWithGoogle,
                         ),
                         const SizedBox(height: 12),
                         OutlinedButton.icon(

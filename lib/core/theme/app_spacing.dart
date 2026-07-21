@@ -12,11 +12,6 @@ abstract final class AppSpacing {
   static const double xxxl = 48;
 
   static const EdgeInsets pagePadding = EdgeInsets.symmetric(horizontal: md);
-  static const EdgeInsets pagePaddingLg = EdgeInsets.fromLTRB(
-    md,
-    sm,
-    md,
-    xxxl,
-  );
+  static const EdgeInsets pagePaddingLg = EdgeInsets.fromLTRB(md, sm, md, xxxl);
   static const EdgeInsets cardPadding = EdgeInsets.all(md);
 }

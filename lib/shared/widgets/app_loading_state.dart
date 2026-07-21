@@ -4,10 +4,7 @@ import '../../core/theme/app_spacing.dart';
 
 /// Centered loading indicator with optional label.
 class AppLoadingState extends StatelessWidget {
-  const AppLoadingState({
-    this.message,
-    super.key,
-  });
+  const AppLoadingState({this.message, super.key});
 
   final String? message;
 

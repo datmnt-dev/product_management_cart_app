@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../app/router.dart';
 import '../../core/theme/app_motion.dart';
 import '../../core/theme/app_radii.dart';
-import '../../core/theme/app_spacing.dart';
 import '../../data/models/product_model.dart';
 import '../../state/cart_controller.dart';
 import '../../state/product_controller.dart';
@@ -28,7 +27,10 @@ class ProductCard extends StatefulWidget {
   final bool canDelete;
   final bool canShop;
 
-  static bool isNew(Product product, {Duration window = const Duration(days: 7)}) {
+  static bool isNew(
+    Product product, {
+    Duration window = const Duration(days: 7),
+  }) {
     return DateTime.now().difference(product.createdAt) <= window;
   }
 
@@ -158,9 +160,10 @@ class _ProductCardState extends State<ProductCard> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(AppSpacing.sm - 2),
+                  padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
                         product.name,
@@ -169,9 +172,10 @@ class _ProductCardState extends State<ProductCard> {
                         style: tt.titleSmall?.copyWith(
                           fontWeight: FontWeight.w900,
                           fontSize: 13,
+                          height: 1.2,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         '${product.category.label} · '
                         '${product.isInStock ? 'Kho ${product.stockQuantity}' : 'Hết hàng'}',
@@ -180,12 +184,15 @@ class _ProductCardState extends State<ProductCard> {
                         style: tt.labelSmall?.copyWith(
                           color: cs.onSurfaceVariant,
                           fontWeight: FontWeight.w700,
+                          height: 1.2,
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xs),
+                      const SizedBox(height: 6),
                       Row(
                         children: [
-                          Expanded(child: PriceText(product.price, fontSize: 13)),
+                          Expanded(
+                            child: PriceText(product.price, fontSize: 13),
+                          ),
                           if (widget.canShop)
                             _AddToCartButton(product: product),
                         ],
@@ -229,8 +236,9 @@ class _AddToCartButton extends StatelessWidget {
             borderRadius: AppRadii.borderMd,
             onTap: enabled
                 ? () {
-                    final added =
-                        context.read<CartController>().addProduct(product);
+                    final added = context.read<CartController>().addProduct(
+                      product,
+                    );
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(
@@ -244,8 +252,8 @@ class _AddToCartButton extends StatelessWidget {
                   }
                 : null,
             child: SizedBox(
-              width: 44,
-              height: 44,
+              width: 40,
+              height: 36,
               child: Icon(
                 Icons.add_shopping_cart_rounded,
                 size: 18,

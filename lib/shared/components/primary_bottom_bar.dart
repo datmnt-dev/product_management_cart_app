@@ -4,10 +4,7 @@ import '../../core/theme/app_spacing.dart';
 
 /// Surface-aligned bottom bar for detail/cart primary CTAs.
 class PrimaryBottomBar extends StatelessWidget {
-  const PrimaryBottomBar({
-    required this.child,
-    super.key,
-  });
+  const PrimaryBottomBar({required this.child, super.key});
 
   final Widget child;
 
@@ -31,12 +28,14 @@ class PrimaryBottomBar extends StatelessWidget {
             ),
           ],
         ),
+        // bottom: false — shell NavigationBar already owns bottom safe inset.
         child: SafeArea(
+          bottom: false,
           minimum: const EdgeInsets.fromLTRB(
             AppSpacing.md,
             AppSpacing.sm,
             AppSpacing.md,
-            AppSpacing.md,
+            AppSpacing.sm,
           ),
           child: child,
         ),

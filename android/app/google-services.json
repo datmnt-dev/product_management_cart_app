@@ -1,26 +1,51 @@
 {
   "project_info": {
-    "project_number": "1061459193207",
-    "project_id": "product-management-cart-bfacb",
-    "storage_bucket": "product-management-cart-bfacb.firebasestorage.app"
+    "project_number": "381218661910",
+    "project_id": "product-management-cart-app",
+    "storage_bucket": "product-management-cart-app.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1061459193207:android:43b5a2c313834f45100572",
+        "mobilesdk_app_id": "1:381218661910:android:d1a2858d3a71e2e044b737",
         "android_client_info": {
-          "package_name": "com.product_management_cart_app"
+          "package_name": "com.example.product_management_cart_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "381218661910-pme8ha23co805n89nri7icpkgf09ueil.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.product_management_cart_app",
+            "certificate_hash": "c9b3d6a2da50bd04709b4dbc3fcfd147631cb8a6"
+          }
+        },
+        {
+          "client_id": "381218661910-kk7o9hhmka87gegqfbfhdvnum4nca81c.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
-          "current_key": "AIzaSyD0WcdmiaRFlm78iLbyRkdwLj6Nns1P7LU"
+          "current_key": "AIzaSyCgLI_amihkcXixAjKWH2_MqrUBGMHXMGU"
         }
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "381218661910-kk7o9hhmka87gegqfbfhdvnum4nca81c.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "381218661910-vmf0u414au8t5b4qr620t9gfp9ml5t57.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.productManagementCartApp"
+              }
+            }
+          ]
         }
       }
     }

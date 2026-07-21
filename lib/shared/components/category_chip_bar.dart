@@ -96,9 +96,7 @@ class StatusFilterChipBar extends StatelessWidget {
                   fontSize: 12,
                   color: selected ? cs.onPrimaryContainer : cs.onSurface,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: AppRadii.borderMd,
-                ),
+                shape: RoundedRectangleBorder(borderRadius: AppRadii.borderMd),
                 showCheckmark: false,
                 visualDensity: VisualDensity.compact,
               );

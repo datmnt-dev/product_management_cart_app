@@ -147,13 +147,9 @@ class _DetailContent extends StatelessWidget {
                             }
                           : null,
                       icon: Icon(
-                        canBuy
-                            ? Icons.add_shopping_cart_rounded
-                            : Icons.block,
+                        canBuy ? Icons.add_shopping_cart_rounded : Icons.block,
                       ),
-                      label: Text(
-                        canBuy ? 'Thêm vào giỏ' : 'Không thể mua',
-                      ),
+                      label: Text(canBuy ? 'Thêm vào giỏ' : 'Không thể mua'),
                     ),
                   ),
                 ],

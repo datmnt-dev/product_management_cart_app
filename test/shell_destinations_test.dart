@@ -26,16 +26,17 @@ void main() {
       expect(dests.length, 3);
     });
 
-    test('manager has store + statistics (2 tabs)', () {
+    test('manager has inventory + statistics (2 tabs)', () {
       final dests = destinationsFor(_user(AppRole.manager));
       expect(dests.map((d) => d.branchIndex).toList(), [
         ShellBranches.products,
         ShellBranches.statistics,
       ]);
       expect(dests.length, 2);
+      expect(dests.any((d) => d.branchIndex == ShellBranches.orders), isFalse);
     });
 
-    test('admin has store, statistics, roles (3 tabs)', () {
+    test('admin has inventory, statistics, roles (3 tabs)', () {
       final dests = destinationsFor(_user(AppRole.admin));
       expect(dests.map((d) => d.branchIndex).toList(), [
         ShellBranches.products,
@@ -43,6 +44,11 @@ void main() {
         ShellBranches.roles,
       ]);
       expect(dests.length, 3);
+      // Admin = system owner: operates orders inside Statistics, not Orders tab.
+      expect(dests.any((d) => d.branchIndex == ShellBranches.cart), isFalse);
+      expect(dests.any((d) => d.branchIndex == ShellBranches.orders), isFalse);
+      expect(_user(AppRole.admin).canManageOrders, isTrue);
+      expect(_user(AppRole.admin).canShop, isFalse);
     });
 
     test('branch indexes are fixed constants', () {

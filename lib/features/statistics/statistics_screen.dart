@@ -3,10 +3,12 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../app/router.dart';
+import '../../core/theme/app_motion.dart';
+import '../../core/theme/app_radii.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/load_status.dart';
 import '../../data/models/order_model.dart';
-import '../../core/theme/app_motion.dart';
+import '../../data/models/product_model.dart';
 import '../../shared/components/order_expandable_tile.dart';
 import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/app_loading_state.dart';
@@ -22,9 +24,7 @@ class StatisticsScreen extends StatelessWidget {
     final tt = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Báo cáo & Thống kê'),
-      ),
+      appBar: AppBar(title: const Text('Báo cáo & Thống kê')),
       body: Consumer<OrderController>(
         builder: (context, orders, _) {
           if (orders.status == LoadStatus.loading && orders.orders.isEmpty) {
@@ -55,204 +55,476 @@ class StatisticsScreen extends StatelessWidget {
             );
           }
 
-          final filteredOrders = orders.filteredOrders;
+          final filtered = orders.filteredOrders;
+          final revenueOrders = filtered
+              .where((o) => o.status.countsTowardRevenue)
+              .toList();
+          final width = MediaQuery.sizeOf(context).width;
+          final wide = width >= 900;
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 12, 20, 48),
-            children: [
-              // 1. Revenue hero
-              _RevenueDashboardCard(controller: orders),
-              const SizedBox(height: 16),
-
-              // 2. Filter immediately under hero (design §6.8)
-              Text(
-                'Bộ lọc thời gian',
-                style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 10),
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SegmentedButton<RevenueFilter>(
-                  selected: {orders.filter},
-                  onSelectionChanged: (s) => orders.setFilter(s.first),
-                  segments: const [
-                    ButtonSegment(
-                      value: RevenueFilter.all,
-                      icon: Icon(Icons.grid_view, size: 16),
-                      label: Text('Tất cả'),
-                    ),
-                    ButtonSegment(
-                      value: RevenueFilter.day,
-                      icon: Icon(Icons.today, size: 16),
-                      label: Text('Hôm nay'),
-                    ),
-                    ButtonSegment(
-                      value: RevenueFilter.month,
-                      icon: Icon(Icons.calendar_month, size: 16),
-                      label: Text('Tháng'),
-                    ),
-                    ButtonSegment(
-                      value: RevenueFilter.year,
-                      icon: Icon(Icons.calendar_today, size: 16),
-                      label: Text('Năm'),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // 3. Metrics from filtered dataset
-              Row(
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1100),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 48),
                 children: [
-                  Expanded(
-                    child: _MiniMetricCard(
-                      title: 'Đơn hàng lọc',
-                      value: '${filteredOrders.length} đơn',
-                      icon: Icons.receipt_long_outlined,
-                      color: cs.primary,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _MiniMetricCard(
-                      title: 'Đơn hàng/Ngày',
-                      value: _calcOrdersPerDay(filteredOrders),
-                      icon: Icons.calendar_today_outlined,
-                      color: cs.secondary,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _MiniMetricCard(
-                      title: 'Giá trị trung bình',
-                      value: filteredOrders.isEmpty
-                          ? '0đ'
-                          : formatCurrency(
-                              orders.filteredRevenue / filteredOrders.length,
-                            ),
-                      icon: Icons.payments_outlined,
-                      color: Colors.green,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _MiniMetricCard(
-                      title: 'Sản phẩm đã bán',
-                      value: '${_calcTotalItemsSold(filteredOrders)} món',
-                      icon: Icons.shopping_basket_outlined,
-                      color: Colors.blue,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 28),
-
-              // 4. Chart bound to filtered orders (not full list)
-              Text(
-                'Xu hướng doanh số',
-                style: tt.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -.3,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Biểu đồ theo bộ lọc thời gian đang chọn',
-                style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-              ),
-              const SizedBox(height: 14),
-              _SalesBarChart(
-                orders: filteredOrders,
-                filter: orders.filter,
-              ),
-              const SizedBox(height: 28),
-
-              // 5. Best sellers from filtered
-              Text(
-                'Sản phẩm bán chạy nhất',
-                style: tt.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -.3,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Top các sản phẩm trong phạm vi bộ lọc',
-                style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-              ),
-              const SizedBox(height: 14),
-              _BestSellersList(orders: filteredOrders),
-              const SizedBox(height: 28),
-
-              // 6. Order list (filtered)
-              Row(
-                children: [
+                  _RevenueDashboardCard(controller: orders),
+                  const SizedBox(height: 16),
                   Text(
-                    'Danh sách đơn hàng',
+                    'Bộ lọc thời gian',
+                    style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 10),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SegmentedButton<RevenueFilter>(
+                      selected: {orders.filter},
+                      onSelectionChanged: (s) => orders.setFilter(s.first),
+                      segments: const [
+                        ButtonSegment(
+                          value: RevenueFilter.all,
+                          icon: Icon(Icons.grid_view, size: 16),
+                          label: Text('Tất cả'),
+                        ),
+                        ButtonSegment(
+                          value: RevenueFilter.day,
+                          icon: Icon(Icons.today, size: 16),
+                          label: Text('Hôm nay'),
+                        ),
+                        ButtonSegment(
+                          value: RevenueFilter.month,
+                          icon: Icon(Icons.calendar_month, size: 16),
+                          label: Text('Tháng'),
+                        ),
+                        ButtonSegment(
+                          value: RevenueFilter.year,
+                          icon: Icon(Icons.calendar_today, size: 16),
+                          label: Text('Năm'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Bộ lọc trạng thái',
+                    style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 10),
+                  _OrderStatusFilterBar(
+                    selected: orders.statusFilter,
+                    counts: {
+                      for (final status in OrderStatus.values)
+                        status: orders.orders
+                            .where((order) => order.status == status)
+                            .length,
+                    },
+                    onSelected: orders.setStatusFilter,
+                    showAllCount: orders.orders.length,
+                  ),
+                  const SizedBox(height: 20),
+                  _StatusMixBar(orders: filtered),
+                  const SizedBox(height: 20),
+                  if (wide)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: _MetricsGrid(
+                            revenueOrders: revenueOrders,
+                            filteredCount: filtered.length,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _CategoryRevenueCard(orders: revenueOrders),
+                        ),
+                      ],
+                    )
+                  else ...[
+                    _MetricsGrid(
+                      revenueOrders: revenueOrders,
+                      filteredCount: filtered.length,
+                    ),
+                    const SizedBox(height: 16),
+                    _CategoryRevenueCard(orders: revenueOrders),
+                  ],
+                  const SizedBox(height: 28),
+                  Text(
+                    'Xu hướng doanh số',
                     style: tt.titleMedium?.copyWith(
                       fontWeight: FontWeight.w900,
+                      letterSpacing: -.3,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: cs.primaryContainer,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '${filteredOrders.length}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: cs.onPrimaryContainer,
-                      ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Chỉ tính đơn không bị hủy trong bộ lọc thời gian',
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 14),
+                  _SalesBarChart(orders: revenueOrders, filter: orders.filter),
+                  const SizedBox(height: 28),
+                  Text(
+                    'Sản phẩm bán chạy',
+                    style: tt.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -.3,
                     ),
                   ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Top 8 theo số lượng (loại đơn hủy)',
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                  const SizedBox(height: 14),
+                  _BestSellersList(orders: revenueOrders),
+                  const SizedBox(height: 28),
+                  _StaffOrderList(orders: filtered),
                 ],
               ),
-              const SizedBox(height: 12),
-
-              if (filteredOrders.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 20),
-                  child: EmptyState(
-                    icon: Icons.filter_alt_off_outlined,
-                    title: 'Không tìm thấy hóa đơn',
-                    message:
-                        'Không có giao dịch nào khớp với bộ lọc thời gian đang chọn.',
-                  ),
-                )
-              else
-                ...filteredOrders.map(
-                  (o) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: OrderExpandableTile(order: o),
-                  ),
-                ),
-            ],
+            ),
           );
         },
       ),
     );
   }
+}
 
-  int _calcTotalItemsSold(List<OrderModel> orders) {
-    return orders.fold<int>(0, (sum, o) => sum + o.totalQuantity);
+class _OrderStatusFilterBar extends StatelessWidget {
+  const _OrderStatusFilterBar({
+    required this.selected,
+    required this.onSelected,
+    this.counts = const {},
+    this.showAllCount = 0,
+  });
+
+  final OrderStatus? selected;
+  final ValueChanged<OrderStatus?> onSelected;
+  final Map<OrderStatus, int> counts;
+  final int showAllCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FilterChip(
+              label: Text('Tất cả ($showAllCount)'),
+              selected: selected == null,
+              onSelected: (_) => onSelected(null),
+            ),
+          ),
+          for (final status in OrderStatus.values)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                avatar: Icon(status.icon, size: 16, color: status.color),
+                label: Text('${status.shortLabel} (${counts[status] ?? 0})'),
+                selected: selected == status,
+                onSelected: (_) =>
+                    onSelected(selected == status ? null : status),
+              ),
+            ),
+        ],
+      ),
+    );
   }
+}
 
-  String _calcOrdersPerDay(List<OrderModel> orders) {
-    if (orders.isEmpty) return '0';
-    final dates = orders.map((o) => DateUtils.dateOnly(o.createdAt)).toSet();
-    final days = dates.isEmpty ? 1 : dates.length;
-    return (orders.length / days).toStringAsFixed(1);
+class _StaffOrderList extends StatelessWidget {
+  const _StaffOrderList({required this.orders});
+
+  final List<OrderModel> orders;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Danh sách đơn hàng',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: cs.primaryContainer,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '${orders.length}',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: cs.onPrimaryContainer,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (orders.isEmpty)
+          const EmptyState(
+            icon: Icons.filter_alt_off_outlined,
+            title: 'Không có đơn phù hợp',
+            message: 'Thử đổi bộ lọc thời gian hoặc trạng thái.',
+          )
+        else
+          ...orders.map(
+            (order) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: OrderExpandableTile(order: order, showCustomerEmail: true),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _MetricsGrid extends StatelessWidget {
+  const _MetricsGrid({
+    required this.revenueOrders,
+    required this.filteredCount,
+  });
+
+  final List<OrderModel> revenueOrders;
+  final int filteredCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final revenue = revenueOrders.fold<double>(0, (s, o) => s + o.totalAmount);
+    final items = revenueOrders.fold<int>(0, (s, o) => s + o.totalQuantity);
+    final aov = revenueOrders.isEmpty ? 0.0 : revenue / revenueOrders.length;
+    final dates = revenueOrders
+        .map((o) => DateUtils.dateOnly(o.createdAt))
+        .toSet();
+    final perDay = revenueOrders.isEmpty
+        ? '0'
+        : (revenueOrders.length / (dates.isEmpty ? 1 : dates.length))
+              .toStringAsFixed(1);
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _MiniMetricCard(
+                title: 'Đơn (có DT)',
+                value: '${revenueOrders.length}/$filteredCount',
+                icon: Icons.receipt_long_outlined,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _MiniMetricCard(
+                title: 'Đơn/Ngày',
+                value: perDay,
+                icon: Icons.calendar_today_outlined,
+                color: Theme.of(context).colorScheme.secondary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _MiniMetricCard(
+                title: 'Giá trị TB',
+                value: formatCurrency(aov),
+                icon: Icons.payments_outlined,
+                color: Colors.green,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _MiniMetricCard(
+                title: 'SP đã bán',
+                value: '$items món',
+                icon: Icons.shopping_basket_outlined,
+                color: Colors.blue,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusMixBar extends StatelessWidget {
+  const _StatusMixBar({required this.orders});
+  final List<OrderModel> orders;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = orders.length;
+    if (total == 0) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Phân bổ trạng thái',
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: SizedBox(
+            height: 14,
+            child: Row(
+              children: [
+                for (final s in OrderStatus.values)
+                  if (orders.where((o) => o.status == s).isNotEmpty)
+                    Expanded(
+                      flex: orders.where((o) => o.status == s).length,
+                      child: Container(color: s.color),
+                    ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 6,
+          children: [
+            for (final s in OrderStatus.values)
+              _LegendChip(
+                color: s.color,
+                label:
+                    '${s.shortLabel} ${orders.where((o) => o.status == s).length}',
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _LegendChip extends StatelessWidget {
+  const _LegendChip({required this.color, required this.label});
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryRevenueCard extends StatelessWidget {
+  const _CategoryRevenueCard({required this.orders});
+  final List<OrderModel> orders;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final map = <String, double>{};
+    for (final o in orders) {
+      for (final line in o.items) {
+        final key = line.category.isEmpty ? 'other' : line.category;
+        map[key] = (map[key] ?? 0) + line.totalPrice;
+      }
+    }
+    final entries = map.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final max = entries.isEmpty ? 1.0 : entries.first.value;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: AppRadii.borderLg,
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: .45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Doanh thu theo danh mục',
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 12),
+          if (entries.isEmpty)
+            Text(
+              'Chưa có dữ liệu',
+              style: TextStyle(color: cs.onSurfaceVariant),
+            )
+          else
+            ...entries.map((e) {
+              final cat = ProductCategoryX.fromKey(e.key);
+              final ratio = max == 0 ? 0.0 : e.value / max;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            cat.label,
+                            style: const TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        Text(
+                          formatCurrency(e.value),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            color: cs.primary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: ratio.clamp(0.04, 1),
+                        minHeight: 6,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
+      ),
+    );
   }
 }
 
@@ -350,7 +622,7 @@ class _RevenueDashboardCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  'Tổng ${controller.orders.length} đơn hàng',
+                  'Tổng ${controller.orders.length} đơn',
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
@@ -383,44 +655,43 @@ class _MiniMetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: cs.outlineVariant.withValues(alpha: .4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: .1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: color, size: 16),
-              ),
-              const Spacer(),
-            ],
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 16),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
             title,
-            style: const TextStyle(
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w800,
-              color: Colors.grey,
+              color: cs.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w900,
-              color: Colors.black87,
+              color: cs.onSurface,
             ),
           ),
         ],
@@ -429,7 +700,6 @@ class _MiniMetricCard extends StatelessWidget {
   }
 }
 
-// ── Custom Bar Chart ──
 class _BarData {
   _BarData({required this.label, required this.value});
   final String label;
@@ -448,7 +718,6 @@ class _SalesBarChart extends StatelessWidget {
 
     List<_BarData> dataPoints = [];
     if (filter == RevenueFilter.all || filter == RevenueFilter.year) {
-      // Group by Month (Last 6 Months)
       dataPoints = List.generate(6, (index) {
         final date = DateTime(now.year, now.month - (5 - index), 1);
         final monthOrders = orders.where(
@@ -462,7 +731,6 @@ class _SalesBarChart extends StatelessWidget {
         return _BarData(label: 'T${date.month}', value: total);
       });
     } else {
-      // Group by Day (Last 7 Days)
       dataPoints = List.generate(7, (index) {
         final date = now.subtract(Duration(days: 6 - index));
         final dayOrders = orders.where(
@@ -488,7 +756,7 @@ class _SalesBarChart extends StatelessWidget {
       height: 190,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: cs.outlineVariant.withValues(alpha: .45)),
       ),
@@ -501,17 +769,15 @@ class _SalesBarChart extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                // Amount tooltip label above bar
                 Text(
                   _formatShortValue(dp.value),
                   style: TextStyle(
                     fontSize: 9,
                     fontWeight: FontWeight.w900,
-                    color: dp.value > 0 ? cs.primary : Colors.grey.shade400,
+                    color: dp.value > 0 ? cs.primary : cs.onSurfaceVariant,
                   ),
                 ),
                 const SizedBox(height: 6),
-                // Visual Bar
                 Expanded(
                   child: TweenAnimationBuilder<double>(
                     key: ValueKey(dp.value),
@@ -543,13 +809,12 @@ class _SalesBarChart extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                // Time category label below bar
                 Text(
                   dp.label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
-                    color: Colors.grey,
+                    color: cs.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -568,11 +833,17 @@ class _SalesBarChart extends StatelessWidget {
   }
 }
 
-// ── Best Selling Products Listing ──
 class _ProductSale {
-  _ProductSale({required this.name, required this.quantity});
+  _ProductSale({
+    required this.id,
+    required this.name,
+    required this.quantity,
+    required this.revenue,
+  });
+  final String id;
   final String name;
   final int quantity;
+  final double revenue;
 }
 
 class _BestSellersList extends StatelessWidget {
@@ -583,21 +854,32 @@ class _BestSellersList extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    // Aggregate products sold
-    final counts = <String, int>{};
+    final qty = <String, int>{};
+    final rev = <String, double>{};
+    final names = <String, String>{};
     for (final order in orders) {
       for (final item in order.items) {
-        counts[item.name] = (counts[item.name] ?? 0) + item.quantity;
+        final id = item.productId.isEmpty ? item.name : item.productId;
+        qty[id] = (qty[id] ?? 0) + item.quantity;
+        rev[id] = (rev[id] ?? 0) + item.totalPrice;
+        names[id] = item.name;
       }
     }
 
     final sortedList =
-        counts.entries
-            .map((e) => _ProductSale(name: e.key, quantity: e.value))
+        qty.entries
+            .map(
+              (e) => _ProductSale(
+                id: e.key,
+                name: names[e.key] ?? e.key,
+                quantity: e.value,
+                revenue: rev[e.key] ?? 0,
+              ),
+            )
             .toList()
           ..sort((a, b) => b.quantity.compareTo(a.quantity));
 
-    final bestSellers = sortedList.take(4).toList();
+    final bestSellers = sortedList.take(8).toList();
 
     if (bestSellers.isEmpty) {
       return Container(
@@ -606,7 +888,7 @@ class _BestSellersList extends StatelessWidget {
         child: Text(
           'Không có dữ liệu mặt hàng',
           style: TextStyle(
-            color: Colors.grey.shade400,
+            color: cs.onSurfaceVariant,
             fontSize: 13,
             fontWeight: FontWeight.bold,
           ),
@@ -619,60 +901,74 @@ class _BestSellersList extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: cs.outlineVariant.withValues(alpha: .45)),
       ),
       child: Column(
-        children: bestSellers.map((item) {
-          final percent = maxSales == 0 ? 0.0 : (item.quantity / maxSales);
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          for (var i = 0; i < bestSellers.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
+            Builder(
+              builder: (context) {
+                final item = bestSellers[i];
+                final percent = maxSales == 0
+                    ? 0.0
+                    : (item.quantity / maxSales);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(
-                        item.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 12,
+                          backgroundColor: cs.primaryContainer,
+                          child: Text(
+                            '${i + 1}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w900,
+                              color: cs.onPrimaryContainer,
+                            ),
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            item.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${item.quantity} sp · ${formatCurrency(item.revenue)}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${item.quantity} cái',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        color: cs.primary,
-                        fontSize: 13,
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: percent.clamp(0.04, 1),
+                        minHeight: 6,
                       ),
                     ),
                   ],
-                ),
-                const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: percent,
-                    minHeight: 6,
-                    backgroundColor: cs.primary.withValues(alpha: .08),
-                    valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
-                  ),
-                ),
-              ],
+                );
+              },
             ),
-          );
-        }).toList(),
+          ],
+        ],
       ),
     );
   }
 }
-
-

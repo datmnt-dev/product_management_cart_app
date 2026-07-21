@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../app/router.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/validators.dart';
 import '../../data/models/cart_item.dart';
 import '../../shared/components/price_text.dart';
 import '../../shared/components/primary_bottom_bar.dart';
@@ -16,7 +17,6 @@ import '../../shared/widgets/product_image.dart';
 import '../../state/auth_controller.dart';
 import '../../state/cart_controller.dart';
 import '../../state/order_controller.dart';
-import '../../state/product_controller.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -59,15 +59,13 @@ class _CartScreenState extends State<CartScreen> {
                 onPressed: cart.isEmpty || _checkingOut
                     ? null
                     : () => _confirmClear(context, cart),
-                icon: Icon(
-                  Icons.delete_sweep_outlined,
-                  color: cs.error,
-                ),
+                icon: Icon(Icons.delete_sweep_outlined, color: cs.error),
               );
             },
           ),
         ],
       ),
+      // Checkout bar lives in body (Column) so it stacks cleanly above shell nav.
       body: Consumer<CartController>(
         builder: (context, cart, _) {
           if (cart.isEmpty) {
@@ -84,79 +82,90 @@ class _CartScreenState extends State<CartScreen> {
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              AppSpacing.xs,
-              AppSpacing.md,
-              140,
-            ),
-            itemCount: cart.items.length,
-            itemBuilder: (context, i) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _CartTile(item: cart.items[i]),
-            ),
-          );
-        },
-      ),
-      bottomNavigationBar: Consumer<CartController>(
-        builder: (context, cart, _) {
-          if (cart.isEmpty) return const SizedBox.shrink();
-
-          return PrimaryBottomBar(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          return Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: Column(
+                children: [
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.xs,
+                        AppSpacing.md,
+                        AppSpacing.md,
+                      ),
+                      itemCount: cart.items.length,
+                      itemBuilder: (context, i) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _CartTile(item: cart.items[i]),
+                      ),
+                    ),
+                  ),
+                  PrimaryBottomBar(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'TỔNG CỘNG',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            color: cs.onSurfaceVariant,
-                          ),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'TỔNG CỘNG',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    color: cs.onSurfaceVariant,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${cart.totalQuantity} sản phẩm',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: cs.onSurfaceVariant,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            PriceText(cart.totalPrice, fontSize: 20),
+                          ],
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${cart.totalQuantity} sản phẩm',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: cs.onSurfaceVariant,
-                            fontWeight: FontWeight.w800,
+                        const SizedBox(height: AppSpacing.sm),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton(
+                            onPressed: _checkingOut
+                                ? null
+                                : () => _checkout(context),
+                            child: _checkingOut
+                                ? SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                      color: cs.onPrimary,
+                                    ),
+                                  )
+                                : const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.shopping_cart_checkout),
+                                      SizedBox(width: 8),
+                                      Text('Đặt hàng ngay'),
+                                    ],
+                                  ),
                           ),
                         ),
                       ],
                     ),
-                    PriceText(cart.totalPrice, fontSize: 20),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                FilledButton(
-                  onPressed: _checkingOut ? null : () => _checkout(context),
-                  child: _checkingOut
-                      ? SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            color: cs.onPrimary,
-                          ),
-                        )
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.shopping_cart_checkout),
-                            SizedBox(width: 8),
-                            Text('Đặt hàng ngay'),
-                          ],
-                        ),
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           );
         },
@@ -180,84 +189,39 @@ class _CartScreenState extends State<CartScreen> {
 
     final cart = context.read<CartController>();
     final user = context.read<AuthController>().currentUser;
-    final productController = context.read<ProductController>();
     final orderController = context.read<OrderController>();
     final messenger = ScaffoldMessenger.of(context);
     if (user == null || cart.isEmpty) return;
 
-    final confirmed = await showModalBottomSheet<bool>(
+    final shipping = await showModalBottomSheet<_CheckoutPayload>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
       builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.lg,
-            AppSpacing.sm,
-            AppSpacing.lg,
-            MediaQuery.paddingOf(ctx).bottom + AppSpacing.lg,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Xác nhận đặt hàng',
-                style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Bạn muốn mua ${cart.totalQuantity} sản phẩm với tổng '
-                '${formatCurrency(cart.totalPrice)}?',
-                style: Theme.of(ctx).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              FilledButton(
-                onPressed: () {
-                  HapticFeedback.mediumImpact();
-                  Navigator.pop(ctx, true);
-                },
-                child: const Text('Xác nhận đặt'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Quay lại'),
-              ),
-            ],
-          ),
+        return _CheckoutSheet(
+          totalQuantity: cart.totalQuantity,
+          totalPrice: cart.totalPrice,
+          defaultName: user.fullName,
         );
       },
     );
 
-    if (confirmed != true || !mounted) return;
+    if (shipping == null || !mounted) return;
 
     setState(() => _checkingOut = true);
-    var stockAlreadyReduced = false;
 
     try {
       final items = List<CartItem>.from(cart.items);
-      final quantities = {
-        for (final item in items) item.product.id: item.quantity,
-      };
 
-      final hasStock = await productController.reduceStock(quantities);
-      if (!hasStock) {
-        if (!mounted) return;
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Một số sản phẩm đã hết hàng hoặc không đủ số lượng.',
-            ),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        return;
-      }
-      stockAlreadyReduced = true;
-
-      final order = await orderController.checkout(user: user, items: items);
+      // Stock + order are written in one Firestore transaction (no orphan stock).
+      final order = await orderController.checkout(
+        user: user,
+        items: items,
+        customerName: shipping.name,
+        phone: shipping.phone,
+        shippingAddress: shipping.address,
+        note: shipping.note,
+      );
       cart.clear();
 
       if (!context.mounted) return;
@@ -287,15 +251,16 @@ class _CartScreenState extends State<CartScreen> {
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Text(
-                  'Đặt hàng thành công!',
+                  'Đã gửi đơn thành công!',
                   textAlign: TextAlign.center,
-                  style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: Theme.of(
+                    ctx,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
-                  'Đơn #$orderLabel đã được tạo.',
+                  'Đơn #$orderLabel đang ở trạng thái "Đã gửi đơn".\n'
+                  'Cửa hàng sẽ xác nhận khi nhận đơn — bạn có thể theo dõi trong mục Đơn.',
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppSpacing.lg),
@@ -319,24 +284,41 @@ class _CartScreenState extends State<CartScreen> {
         },
       );
     } catch (e, st) {
-      debugPrint(
-        'checkout_failed after_stock=$stockAlreadyReduced err=$e\n$st',
-      );
+      debugPrint('checkout_failed err=$e\n$st');
       if (!mounted) return;
+      final message = _checkoutErrorMessage(e);
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            stockAlreadyReduced
-                ? 'Đã trừ tồn kho nhưng tạo đơn thất bại. '
-                    'Vui lòng liên hệ hỗ trợ hoặc thử lại sau.'
-                : 'Không thể đặt hàng. Vui lòng thử lại.',
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     } finally {
       if (mounted) setState(() => _checkingOut = false);
     }
+  }
+
+  String _checkoutErrorMessage(Object e) {
+    final raw = e.toString();
+    if (raw.contains('permission-denied') ||
+        raw.contains('PERMISSION_DENIED')) {
+      return 'Không có quyền tạo đơn (permission-denied). '
+          'Hãy đăng nhập lại bằng tài khoản customer và thử lại.';
+    }
+    if (raw.contains('Không đủ tồn kho') ||
+        raw.contains('insufficient-stock') ||
+        raw.contains('Sản phẩm không tồn tại')) {
+      return raw
+          .replaceFirst('Bad state: ', '')
+          .replaceFirst('Exception: ', '');
+    }
+    if (raw.contains('email')) {
+      return 'Phiên đăng nhập thiếu email. Vui lòng đăng xuất và đăng nhập lại.';
+    }
+    // Surface a readable message for lab debugging (not only generic copy).
+    final short = raw
+        .replaceFirst('Bad state: ', '')
+        .replaceFirst('Exception: ', '')
+        .replaceFirst('[cloud_firestore/permission-denied] ', '');
+    if (short.length < 160) return 'Không thể đặt hàng: $short';
+    return 'Không thể đặt hàng. Vui lòng thử lại.';
   }
 }
 
@@ -427,6 +409,162 @@ class _CartTile extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CheckoutPayload {
+  const _CheckoutPayload({
+    required this.name,
+    required this.phone,
+    required this.address,
+    required this.note,
+  });
+
+  final String name;
+  final String phone;
+  final String address;
+  final String note;
+}
+
+class _CheckoutSheet extends StatefulWidget {
+  const _CheckoutSheet({
+    required this.totalQuantity,
+    required this.totalPrice,
+    required this.defaultName,
+  });
+
+  final int totalQuantity;
+  final double totalPrice;
+  final String defaultName;
+
+  @override
+  State<_CheckoutSheet> createState() => _CheckoutSheetState();
+}
+
+class _CheckoutSheetState extends State<_CheckoutSheet> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _name;
+  late final TextEditingController _phone;
+  late final TextEditingController _address;
+  late final TextEditingController _note;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = TextEditingController(text: widget.defaultName);
+    _phone = TextEditingController();
+    _address = TextEditingController();
+    _note = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _phone.dispose();
+    _address.dispose();
+    _note.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.viewInsetsOf(context).bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        MediaQuery.paddingOf(context).bottom + AppSpacing.lg + bottom,
+      ),
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Thông tin giao hàng',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                '${widget.totalQuantity} sản phẩm · '
+                '${formatCurrency(widget.totalPrice)}',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              TextFormField(
+                controller: _name,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Họ tên người nhận',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                validator: (v) => Validators.requiredText(v, 'họ tên'),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _phone,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Số điện thoại',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                ),
+                validator: Validators.phone,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _address,
+                textInputAction: TextInputAction.next,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Địa chỉ giao hàng',
+                  prefixIcon: Icon(Icons.location_on_outlined),
+                  alignLabelWithHint: true,
+                ),
+                validator: Validators.shippingAddress,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              TextFormField(
+                controller: _note,
+                textInputAction: TextInputAction.done,
+                maxLines: 2,
+                decoration: const InputDecoration(
+                  labelText: 'Ghi chú (tuỳ chọn)',
+                  prefixIcon: Icon(Icons.sticky_note_2_outlined),
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              FilledButton(
+                onPressed: () {
+                  if (!_formKey.currentState!.validate()) return;
+                  HapticFeedback.mediumImpact();
+                  Navigator.pop(
+                    context,
+                    _CheckoutPayload(
+                      name: _name.text.trim(),
+                      phone: _phone.text.trim(),
+                      address: _address.text.trim(),
+                      note: _note.text.trim(),
+                    ),
+                  );
+                },
+                child: const Text('Xác nhận đặt hàng'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Quay lại'),
+              ),
+            ],
+          ),
         ),
       ),
     );

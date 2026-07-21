@@ -4,11 +4,12 @@ import 'package:flutter/foundation.dart';
 
 import '../core/utils/load_status.dart';
 import '../data/models/product_model.dart';
+import '../data/models/user_role.dart';
 import '../data/services/firestore_database.dart';
 import 'auth_controller.dart';
 import 'product_filters.dart';
 
-enum ProductSort { newest, priceAsc, priceDesc }
+enum ProductSort { newest, priceAsc, priceDesc, stockDesc }
 
 class ProductController extends ChangeNotifier {
   ProductController(this._database, this._authController) {
@@ -19,12 +20,14 @@ class ProductController extends ChangeNotifier {
   final FirestoreDatabase _database;
   final AuthController _authController;
   StreamSubscription<List<Product>>? _subscription;
+  String? _activeUserKey;
 
   List<Product> _products = [];
   String _searchQuery = '';
   ProductSort _sort = ProductSort.newest;
   ProductCategory? _category;
   ProductStatus? _statusFilter;
+  bool _inStockOnly = false;
   LoadStatus _status = LoadStatus.idle;
   String? _errorMessage;
 
@@ -33,12 +36,20 @@ class ProductController extends ChangeNotifier {
   ProductSort get sort => _sort;
   ProductCategory? get category => _category;
   ProductStatus? get statusFilter => _statusFilter;
+  bool get inStockOnly => _inStockOnly;
   LoadStatus get status => _status;
   String? get errorMessage => _errorMessage;
 
   bool get isLoading => _status == LoadStatus.loading;
   bool get hasError => _status == LoadStatus.error;
   bool get isReady => _status == LoadStatus.ready;
+
+  bool get hasActiveFilters =>
+      _searchQuery.trim().isNotEmpty ||
+      _category != null ||
+      _statusFilter != null ||
+      _inStockOnly ||
+      _sort != ProductSort.newest;
 
   /// Filtered list using design §5.1 pipeline.
   List<Product> get visibleProducts {
@@ -50,6 +61,7 @@ class ProductController extends ChangeNotifier {
       statusFilter: _statusFilter,
       searchQuery: _searchQuery,
       sort: _sort,
+      inStockOnly: _inStockOnly,
     );
   }
 
@@ -92,6 +104,20 @@ class ProductController extends ChangeNotifier {
   /// Staff-only filter; ignored for customers in the pipeline.
   void setStatusFilter(ProductStatus? status) {
     _statusFilter = status;
+    notifyListeners();
+  }
+
+  void setInStockOnly(bool value) {
+    _inStockOnly = value;
+    notifyListeners();
+  }
+
+  void clearFilters() {
+    _searchQuery = '';
+    _sort = ProductSort.newest;
+    _category = null;
+    _statusFilter = null;
+    _inStockOnly = false;
     notifyListeners();
   }
 
@@ -150,12 +176,21 @@ class ProductController extends ChangeNotifier {
 
   void _watchProductsForCurrentUser() {
     _subscription?.cancel();
-    if (!_authController.isAuthenticated) {
+    final user = _authController.currentUser;
+    if (user == null) {
+      _activeUserKey = null;
       _products = [];
+      _resetFiltersSilently();
       _status = LoadStatus.idle;
       _errorMessage = null;
       notifyListeners();
       return;
+    }
+
+    final userKey = '${user.email.trim().toLowerCase()}|${user.role.key}';
+    if (_activeUserKey != userKey) {
+      _activeUserKey = userKey;
+      _resetFiltersSilently();
     }
 
     _status = LoadStatus.loading;
@@ -176,6 +211,14 @@ class ProductController extends ChangeNotifier {
         notifyListeners();
       },
     );
+  }
+
+  void _resetFiltersSilently() {
+    _searchQuery = '';
+    _sort = ProductSort.newest;
+    _category = null;
+    _statusFilter = null;
+    _inStockOnly = false;
   }
 
   static String _createSku(DateTime now) {

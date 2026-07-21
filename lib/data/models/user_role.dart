@@ -39,11 +39,11 @@ extension AppRoleX on AppRole {
   String get description {
     switch (this) {
       case AppRole.admin:
-        return 'Toàn quyền quản trị sản phẩm, doanh thu và ma trận phân quyền.';
+        return 'Quản trị toàn hệ thống: kho, điều phối mọi đơn, doanh thu, phân quyền.';
       case AppRole.manager:
-        return 'Vận hành sản phẩm và theo dõi doanh thu bán hàng.';
+        return 'Vận hành kho, điều phối đơn hàng và theo dõi doanh thu (không đổi role).';
       case AppRole.customer:
-        return 'Mua hàng, checkout và xem lịch sử đơn đã đặt.';
+        return 'Mua hàng, checkout và theo dõi đơn của chính mình.';
     }
   }
 
@@ -92,6 +92,15 @@ extension AppRoleX on AppRole {
   bool get canViewRevenue {
     return this == AppRole.admin || this == AppRole.manager;
   }
+
+  /// Admin + Manager operate all orders from the Statistics workflow.
+  /// The `/orders` route remains customer-only for personal history.
+  bool get canManageOrders {
+    return this == AppRole.admin || this == AppRole.manager;
+  }
+
+  /// True for system operators (admin/manager), not shoppers.
+  bool get isStaff => canManageOrders || canViewRevenue;
 
   bool get canViewRoleMatrix {
     return this == AppRole.admin;

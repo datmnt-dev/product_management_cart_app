@@ -50,15 +50,12 @@ class QuantityStepper extends StatelessWidget {
             ),
             child: Text(
               '$quantity',
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w900,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
             ),
           ),
-          _StepButton(
-            icon: Icons.add,
-            onPressed: canInc ? onIncrement : null,
-          ),
+          _StepButton(icon: Icons.add, onPressed: canInc ? onIncrement : null),
         ],
       ),
     );

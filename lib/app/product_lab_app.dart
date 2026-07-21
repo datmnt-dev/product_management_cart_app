@@ -18,6 +18,7 @@ class _ProductLabAppState extends State<ProductLabApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Providers live in main()'s MultiProvider (parent of this widget).
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'StoreFlow',
