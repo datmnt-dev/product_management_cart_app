@@ -11,6 +11,7 @@ import '../features/products/product_detail_screen.dart';
 import '../features/products/product_form_screen.dart';
 import '../features/products/product_list_screen.dart';
 import '../features/roles/role_matrix_screen.dart';
+import '../features/seller/seller_dashboard_screen.dart';
 import '../features/statistics/statistics_screen.dart';
 import '../shared/shell/app_shell.dart';
 import '../shared/widgets/empty_state.dart';
@@ -30,6 +31,7 @@ class AppRoutes {
   static const roles = '/roles';
   static const coupons = '/coupons';
   static const fulfillments = '/seller-fulfillments';
+  static const sellerDashboard = '/seller-dashboard';
 
   static String productDetails(String id) => '/products/$id';
 
@@ -85,11 +87,19 @@ GoRouter buildAppRouter(AuthController authController) {
         if (path == AppRoutes.fulfillments && !user.isSeller) {
           return AppRoutes.products;
         }
+        if (path == AppRoutes.sellerDashboard && !user.isSeller) {
+          return AppRoutes.products;
+        }
       }
 
       return null;
     },
     routes: [
+      GoRoute(
+        path: AppRoutes.sellerDashboard,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => const SellerDashboardScreen(),
+      ),
       GoRoute(
         path: AppRoutes.fulfillments,
         parentNavigatorKey: rootNavigatorKey,

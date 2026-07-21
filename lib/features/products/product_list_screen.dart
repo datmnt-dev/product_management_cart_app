@@ -56,6 +56,12 @@ class ProductListScreen extends StatelessWidget {
         actions: [
           if (user?.isSeller == true)
             IconButton(
+              tooltip: 'Tổng quan shop',
+              onPressed: () => context.go(AppRoutes.sellerDashboard),
+              icon: const Icon(Icons.dashboard_outlined),
+            ),
+          if (user?.isSeller == true)
+            IconButton(
               tooltip: 'Đơn cần giao',
               onPressed: () => context.go(AppRoutes.fulfillments),
               icon: const Icon(Icons.local_shipping_outlined),
