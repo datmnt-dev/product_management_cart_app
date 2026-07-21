@@ -180,6 +180,152 @@ extension OrderStatusX on OrderStatus {
   }
 }
 
+enum PaymentMethod { cashOnDelivery, bankTransfer, mockWallet }
+
+extension PaymentMethodX on PaymentMethod {
+  String get key {
+    switch (this) {
+      case PaymentMethod.cashOnDelivery:
+        return 'cash_on_delivery';
+      case PaymentMethod.bankTransfer:
+        return 'bank_transfer';
+      case PaymentMethod.mockWallet:
+        return 'mock_wallet';
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case PaymentMethod.cashOnDelivery:
+        return 'Thanh toán khi nhận hàng';
+      case PaymentMethod.bankTransfer:
+        return 'Chuyển khoản ngân hàng';
+      case PaymentMethod.mockWallet:
+        return 'Ví điện tử giả lập';
+    }
+  }
+
+  String get shortLabel {
+    switch (this) {
+      case PaymentMethod.cashOnDelivery:
+        return 'COD';
+      case PaymentMethod.bankTransfer:
+        return 'Chuyển khoản';
+      case PaymentMethod.mockWallet:
+        return 'Ví mock';
+    }
+  }
+
+  String get description {
+    switch (this) {
+      case PaymentMethod.cashOnDelivery:
+        return 'Khách thanh toán trực tiếp khi nhận hàng.';
+      case PaymentMethod.bankTransfer:
+        return 'Cửa hàng xác nhận thanh toán sau khi nhận chuyển khoản.';
+      case PaymentMethod.mockWallet:
+        return 'Thanh toán giả lập thành công ngay khi đặt hàng.';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case PaymentMethod.cashOnDelivery:
+        return Icons.payments_outlined;
+      case PaymentMethod.bankTransfer:
+        return Icons.account_balance_outlined;
+      case PaymentMethod.mockWallet:
+        return Icons.account_balance_wallet_outlined;
+    }
+  }
+
+  static PaymentMethod fromKey(String? key) {
+    switch (key) {
+      case 'bank_transfer':
+      case 'bank':
+        return PaymentMethod.bankTransfer;
+      case 'mock_wallet':
+      case 'wallet':
+        return PaymentMethod.mockWallet;
+      case 'cash_on_delivery':
+      case 'cod':
+      default:
+        return PaymentMethod.cashOnDelivery;
+    }
+  }
+}
+
+enum PaymentStatus { unpaid, paid, refunded }
+
+extension PaymentStatusX on PaymentStatus {
+  String get key {
+    switch (this) {
+      case PaymentStatus.unpaid:
+        return 'unpaid';
+      case PaymentStatus.paid:
+        return 'paid';
+      case PaymentStatus.refunded:
+        return 'refunded';
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case PaymentStatus.unpaid:
+        return 'Chưa thanh toán';
+      case PaymentStatus.paid:
+        return 'Đã thanh toán';
+      case PaymentStatus.refunded:
+        return 'Đã hoàn tiền';
+    }
+  }
+
+  String get shortLabel {
+    switch (this) {
+      case PaymentStatus.unpaid:
+        return 'Chưa trả';
+      case PaymentStatus.paid:
+        return 'Đã trả';
+      case PaymentStatus.refunded:
+        return 'Hoàn tiền';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case PaymentStatus.unpaid:
+        return const Color(0xFFD97706);
+      case PaymentStatus.paid:
+        return const Color(0xFF16A34A);
+      case PaymentStatus.refunded:
+        return const Color(0xFF7C3AED);
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case PaymentStatus.unpaid:
+        return Icons.pending_actions_outlined;
+      case PaymentStatus.paid:
+        return Icons.verified_outlined;
+      case PaymentStatus.refunded:
+        return Icons.currency_exchange_outlined;
+    }
+  }
+
+  static PaymentStatus fromKey(String? key) {
+    switch (key) {
+      case 'paid':
+        return PaymentStatus.paid;
+      case 'refunded':
+        return PaymentStatus.refunded;
+      case 'unpaid':
+      case 'pending':
+      default:
+        return PaymentStatus.unpaid;
+    }
+  }
+}
+
 class OrderStatusEvent {
   const OrderStatusEvent({
     required this.status,
@@ -272,6 +418,8 @@ class OrderModel {
     this.phone = '',
     this.shippingAddress = '',
     this.note = '',
+    this.paymentMethod = PaymentMethod.cashOnDelivery,
+    this.paymentStatus = PaymentStatus.unpaid,
   });
 
   final String id;
@@ -289,6 +437,8 @@ class OrderModel {
   final String phone;
   final String shippingAddress;
   final String note;
+  final PaymentMethod paymentMethod;
+  final PaymentStatus paymentStatus;
 
   int get totalQuantity {
     return items.fold<int>(0, (total, item) => total + item.quantity);
@@ -304,6 +454,15 @@ class OrderModel {
   bool get hasShippingInfo =>
       phone.trim().isNotEmpty || shippingAddress.trim().isNotEmpty;
 
+  bool get canStaffMarkPaid =>
+      paymentStatus == PaymentStatus.unpaid && status != OrderStatus.cancelled;
+
+  bool get canStaffRefund =>
+      paymentStatus == PaymentStatus.paid && status == OrderStatus.cancelled;
+
+  bool get countsTowardRevenue =>
+      status != OrderStatus.cancelled && paymentStatus == PaymentStatus.paid;
+
   OrderModel copyWith({
     String? id,
     String? userEmail,
@@ -318,6 +477,8 @@ class OrderModel {
     String? phone,
     String? shippingAddress,
     String? note,
+    PaymentMethod? paymentMethod,
+    PaymentStatus? paymentStatus,
   }) {
     return OrderModel(
       id: id ?? this.id,
@@ -333,6 +494,8 @@ class OrderModel {
       phone: phone ?? this.phone,
       shippingAddress: shippingAddress ?? this.shippingAddress,
       note: note ?? this.note,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      paymentStatus: paymentStatus ?? this.paymentStatus,
     );
   }
 
@@ -374,6 +537,8 @@ class OrderModel {
       'phone': phone,
       'shippingAddress': shippingAddress,
       'note': note,
+      'paymentMethod': paymentMethod.key,
+      'paymentStatus': paymentStatus.key,
     };
   }
 
@@ -396,6 +561,12 @@ class OrderModel {
 
     final createdAt = dateFrom(map['createdAt']);
     final status = OrderStatusX.fromKey(map['status']?.toString());
+    final paymentMethod = PaymentMethodX.fromKey(
+      map['paymentMethod']?.toString(),
+    );
+    final paymentStatus = map.containsKey('paymentStatus')
+        ? PaymentStatusX.fromKey(map['paymentStatus']?.toString())
+        : PaymentStatus.unpaid;
 
     // Backfill empty history for legacy documents.
     final effectiveHistory = history.isNotEmpty
@@ -428,6 +599,8 @@ class OrderModel {
       phone: map['phone']?.toString() ?? '',
       shippingAddress: map['shippingAddress']?.toString() ?? '',
       note: map['note']?.toString() ?? '',
+      paymentMethod: paymentMethod,
+      paymentStatus: paymentStatus,
     );
   }
 

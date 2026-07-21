@@ -8,6 +8,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/validators.dart';
 import '../../data/models/cart_item.dart';
+import '../../data/models/order_model.dart';
 import '../../shared/components/price_text.dart';
 import '../../shared/components/primary_bottom_bar.dart';
 import '../../shared/components/quantity_stepper.dart';
@@ -221,6 +222,7 @@ class _CartScreenState extends State<CartScreen> {
         phone: shipping.phone,
         shippingAddress: shipping.address,
         note: shipping.note,
+        paymentMethod: shipping.paymentMethod,
       );
       cart.clear();
 
@@ -260,6 +262,7 @@ class _CartScreenState extends State<CartScreen> {
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Đơn #$orderLabel đang ở trạng thái "Đã gửi đơn".\n'
+                  '${order.paymentMethod.shortLabel} · ${order.paymentStatus.label}.\n'
                   'Cửa hàng sẽ xác nhận khi nhận đơn — bạn có thể theo dõi trong mục Đơn.',
                   textAlign: TextAlign.center,
                 ),
@@ -421,12 +424,14 @@ class _CheckoutPayload {
     required this.phone,
     required this.address,
     required this.note,
+    required this.paymentMethod,
   });
 
   final String name;
   final String phone;
   final String address;
   final String note;
+  final PaymentMethod paymentMethod;
 }
 
 class _CheckoutSheet extends StatefulWidget {
@@ -450,6 +455,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
   late final TextEditingController _phone;
   late final TextEditingController _address;
   late final TextEditingController _note;
+  PaymentMethod _paymentMethod = PaymentMethod.cashOnDelivery;
 
   @override
   void initState() {
@@ -542,6 +548,23 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                   alignLabelWithHint: true,
                 ),
               ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Phương thức thanh toán',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              for (final method in PaymentMethod.values)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: _PaymentMethodTile(
+                    method: method,
+                    selected: _paymentMethod == method,
+                    onTap: () => setState(() => _paymentMethod = method),
+                  ),
+                ),
               const SizedBox(height: AppSpacing.lg),
               FilledButton(
                 onPressed: () {
@@ -554,6 +577,7 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                       phone: _phone.text.trim(),
                       address: _address.text.trim(),
                       note: _note.text.trim(),
+                      paymentMethod: _paymentMethod,
                     ),
                   );
                 },
@@ -562,6 +586,74 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Quay lại'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PaymentMethodTile extends StatelessWidget {
+  const _PaymentMethodTile({
+    required this.method,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final PaymentMethod method;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: selected
+          ? cs.primaryContainer.withValues(alpha: .45)
+          : cs.surfaceContainerHighest.withValues(alpha: .25),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected ? cs.primary : cs.outlineVariant,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(method.icon, color: selected ? cs.primary : cs.onSurface),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      method.label,
+                      style: const TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      method.description,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                selected ? Icons.check_circle : Icons.circle_outlined,
+                color: selected ? cs.primary : cs.onSurfaceVariant,
               ),
             ],
           ),

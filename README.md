@@ -41,11 +41,12 @@ App dùng `StatefulShellRoute` + bottom `NavigationBar` (rail trên màn rộng)
 - Catalog: tìm kiếm, lọc danh mục / còn hàng, sắp xếp (giá, mới, tồn).
 - Giỏ hàng **persist** theo user (SharedPreferences) + clamp theo tồn kho live.
 - Checkout atomic: trừ kho + tạo đơn; form **họ tên / SĐT / địa chỉ / ghi chú**.
+- Payment phase 1: chọn COD / chuyển khoản / ví mock; lưu `paymentMethod` + `paymentStatus`.
 - Tracking: `placed → confirmed → preparing → shipping → delivered` (+ `cancelled`).
 - **Hủy đơn hoàn kho** (transaction + `stockRestored`).
 - Customer: lịch sử đơn và xác nhận đã nhận khi đơn ở trạng thái `shipping`.
 - Staff: xử lý đơn trong **Thống kê** (lọc status, xem email/SĐT), advance/cancel; staff chỉ vận hành tới `shipping`.
-- Dashboard: biểu đồ DT, top 8 SP, mix status, DT theo danh mục (loại đơn hủy).
+- Dashboard: biểu đồ DT, top 8 SP, mix status/payment, DT theo danh mục (chỉ tính đơn đã thanh toán).
 - Ma trận phân quyền (admin).
 
 ## Backend & seed

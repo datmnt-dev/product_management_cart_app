@@ -195,6 +195,8 @@ const orderTemplates = [
     userEmail: "customer@store.local",
     createdAt: now,
     status: "placed",
+    paymentMethod: "cash_on_delivery",
+    paymentStatus: "unpaid",
     items: [
       line("seed-android-budget", 2),
       line("seed-headphone", 1),
@@ -205,6 +207,8 @@ const orderTemplates = [
     userEmail: "customer@store.local",
     createdAt: daysAgo(1),
     status: "confirmed",
+    paymentMethod: "bank_transfer",
+    paymentStatus: "paid",
     items: [
       line("seed-gaming-laptop-low-stock", 1),
     ],
@@ -214,6 +218,8 @@ const orderTemplates = [
     userEmail: "edge.customer@store.local",
     createdAt: daysAgo(8),
     status: "preparing",
+    paymentMethod: "mock_wallet",
+    paymentStatus: "paid",
     items: [
       line("seed-air-fryer", 1),
       line("seed-backpack-no-image", 2),
@@ -224,6 +230,8 @@ const orderTemplates = [
     userEmail: "customer@store.local",
     createdAt: monthsAgo(1),
     status: "shipping",
+    paymentMethod: "cash_on_delivery",
+    paymentStatus: "unpaid",
     items: [
       line("seed-iphone-15-pro", 1),
       line("seed-headphone", 2),
@@ -234,6 +242,8 @@ const orderTemplates = [
     userEmail: "edge.customer@store.local",
     createdAt: monthsAgo(3),
     status: "delivered",
+    paymentMethod: "bank_transfer",
+    paymentStatus: "paid",
     items: [
       line("seed-macbook-air", 1),
     ],
@@ -243,6 +253,42 @@ const orderTemplates = [
     userEmail: "customer@store.local",
     createdAt: new Date(now.getFullYear() - 1, 10, 15, 9, 30, 0),
     status: "cancelled",
+    paymentMethod: "mock_wallet",
+    paymentStatus: "refunded",
+    items: [
+      line("seed-android-budget", 1),
+      line("seed-air-fryer", 1),
+    ],
+  },
+  {
+    id: "seed-order-paid-wallet-today",
+    userEmail: "edge.customer@store.local",
+    createdAt: daysAgo(2),
+    status: "placed",
+    paymentMethod: "mock_wallet",
+    paymentStatus: "paid",
+    items: [
+      line("seed-headphone", 1),
+    ],
+  },
+  {
+    id: "seed-order-bank-unpaid-edge",
+    userEmail: "customer@store.local",
+    createdAt: daysAgo(18),
+    status: "confirmed",
+    paymentMethod: "bank_transfer",
+    paymentStatus: "unpaid",
+    items: [
+      line("seed-backpack-no-image", 1),
+    ],
+  },
+  {
+    id: "seed-order-cod-delivered-paid",
+    userEmail: "customer@store.local",
+    createdAt: monthsAgo(2),
+    status: "delivered",
+    paymentMethod: "cash_on_delivery",
+    paymentStatus: "paid",
     items: [
       line("seed-android-budget", 1),
       line("seed-air-fryer", 1),
@@ -274,6 +320,10 @@ function buildOrder(template) {
     0,
   );
   const status = template.status || "placed";
+  const paymentMethod = template.paymentMethod || "cash_on_delivery";
+  const paymentStatus = template.paymentStatus || (
+    paymentMethod === "mock_wallet" ? "paid" : "unpaid"
+  );
   const createdAt = template.createdAt;
   const statusHistory = buildStatusHistory(status, createdAt, template.userEmail);
   return {
@@ -284,6 +334,8 @@ function buildOrder(template) {
     createdAt,
     updatedAt: statusHistory[statusHistory.length - 1].at,
     status,
+    paymentMethod,
+    paymentStatus,
     statusHistory,
     stockRestored: status === "cancelled",
     customerName: template.userEmail === "edge.customer@store.local"

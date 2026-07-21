@@ -128,5 +128,27 @@ void main() {
       expect(next.status.countsTowardRevenue, isTrue);
       expect(OrderStatus.cancelled.countsTowardRevenue, isFalse);
     });
+
+    test('payment metadata controls order revenue eligibility', () {
+      final now = DateTime(2026, 7, 21, 10);
+      final unpaid = OrderModel(
+        id: 'o2',
+        userEmail: 'customer@store.local',
+        items: const [],
+        totalAmount: 100,
+        createdAt: now,
+        status: OrderStatus.delivered,
+        paymentMethod: PaymentMethod.cashOnDelivery,
+        paymentStatus: PaymentStatus.unpaid,
+      );
+      final paid = unpaid.copyWith(paymentStatus: PaymentStatus.paid);
+      final refunded = unpaid.copyWith(paymentStatus: PaymentStatus.refunded);
+
+      expect(PaymentMethodX.fromKey('mock_wallet'), PaymentMethod.mockWallet);
+      expect(PaymentStatusX.fromKey('paid'), PaymentStatus.paid);
+      expect(unpaid.countsTowardRevenue, isFalse);
+      expect(paid.countsTowardRevenue, isTrue);
+      expect(refunded.countsTowardRevenue, isFalse);
+    });
   });
 }
