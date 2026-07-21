@@ -27,24 +27,24 @@ App dùng `StatefulShellRoute` + bottom `NavigationBar` (rail trên màn rộng)
 | Role | Tabs | Ghi chú |
 | --- | --- | --- |
 | **Customer** | Cửa hàng · Giỏ · Đơn | Chỉ đơn của chính mình |
-| **Manager** | Kho · **Điều phối** · Thống kê | Điều phối mọi đơn + kho + DT |
-| **Admin** | Kho · **Điều phối** · Thống kê · **Quyền** | Quản trị **toàn hệ thống** (gồm mọi đơn) |
+| **Manager** | Kho · Thống kê | Quản lý sản phẩm, đơn hàng và doanh thu |
+| **Admin** | Kho · Thống kê · **Quyền** | Quản trị **toàn hệ thống** |
 
-- **Admin xem/điều phối đơn là đúng**: admin = chủ hệ thống, stream Firestore tất cả orders (giống manager), **không** mua hàng (không Giỏ).
-- Customer tab “Đơn” ≠ staff “Điều phối” (dữ liệu & UI khác nhau).
+- Staff **không** có tab Đơn / Giỏ; đơn hàng staff xem và xử lý trong **Thống kê**.
+- Customer tab “Đơn” chỉ hiển thị lịch sử đơn của chính customer.
 - Chi tiết / form SP: root navigator. Customer chỉ thấy SP **active**.
 
 ## Chức năng chính
 
-- Firebase Auth (đăng ký/đăng nhập), remember me, profile sheet logout.
+- Firebase Auth (email/password + Google Sign-In), remember me, profile sheet logout.
 - CRUD sản phẩm (staff): SKU, danh mục, giá, tồn kho, trạng thái, URL ảnh.
 - Catalog: tìm kiếm, lọc danh mục / còn hàng, sắp xếp (giá, mới, tồn).
 - Giỏ hàng **persist** theo user (SharedPreferences) + clamp theo tồn kho live.
 - Checkout atomic: trừ kho + tạo đơn; form **họ tên / SĐT / địa chỉ / ghi chú**.
 - Tracking: `placed → confirmed → preparing → shipping → delivered` (+ `cancelled`).
 - **Hủy đơn hoàn kho** (transaction + `stockRestored`).
-- Customer: lịch sử đơn + badge/alert khi status đổi (in-app).
-- Staff: tab **Bảng đơn** (lọc status, tìm email/SĐT), advance/cancel; Thống kê = analytics.
+- Customer: lịch sử đơn và xác nhận đã nhận khi đơn ở trạng thái `shipping`.
+- Staff: xử lý đơn trong **Thống kê** (lọc status, xem email/SĐT), advance/cancel; staff chỉ vận hành tới `shipping`.
 - Dashboard: biểu đồ DT, top 8 SP, mix status, DT theo danh mục (loại đơn hủy).
 - Ma trận phân quyền (admin).
 
@@ -61,7 +61,7 @@ firebase deploy --only firestore:rules --project product-management-cart-app
 node tools\verify_firestore_seed.js
 ```
 
-Seed: 4 users, 10 products, 6 orders, 1 `seedRuns` document (đủ edge case demo).
+Seed: 4 users, 10 products, 9 orders, 1 `seedRuns` document (đủ edge case demo).
 
 ## Chạy app
 
