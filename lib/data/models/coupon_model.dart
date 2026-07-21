@@ -62,6 +62,20 @@ class Coupon {
 
   bool get hasUsageLeft => usageLimit <= 0 || usedCount < usageLimit;
 
+  Coupon copyWith({bool? isActive}) => Coupon(
+    code: code,
+    type: type,
+    value: value,
+    minOrderAmount: minOrderAmount,
+    maxDiscountAmount: maxDiscountAmount,
+    startsAt: startsAt,
+    expiresAt: expiresAt,
+    isActive: isActive ?? this.isActive,
+    usageLimit: usageLimit,
+    usedCount: usedCount,
+    description: description,
+  );
+
   bool isAvailable(DateTime now) {
     return isActive &&
         hasUsageLeft &&

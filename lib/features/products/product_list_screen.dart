@@ -53,7 +53,15 @@ class ProductListScreen extends StatelessWidget {
             ),
           ],
         ),
-        actions: const [_AccountMenu()],
+        actions: [
+          if (canManage)
+            IconButton(
+              tooltip: 'Quản lý mã giảm giá',
+              onPressed: () => context.go(AppRoutes.coupons),
+              icon: const Icon(Icons.confirmation_num_outlined),
+            ),
+          const _AccountMenu(),
+        ],
       ),
       floatingActionButton: canManage
           ? FloatingActionButton.extended(
