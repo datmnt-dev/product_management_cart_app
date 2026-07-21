@@ -411,8 +411,8 @@ class OrderModel {
     required this.totalAmount,
     required this.createdAt,
     this.subtotalAmount,
-    this.discountAmount = 0,
-    this.couponCode = '',
+    double? discountAmount = 0,
+    String? couponCode = '',
     this.status = OrderStatus.placed,
     this.updatedAt,
     this.statusHistory = const [],
@@ -423,15 +423,16 @@ class OrderModel {
     this.note = '',
     this.paymentMethod = PaymentMethod.cashOnDelivery,
     this.paymentStatus = PaymentStatus.unpaid,
-  });
+  }) : _discountAmount = discountAmount,
+       _couponCode = couponCode;
 
   final String id;
   final String userEmail;
   final List<OrderLine> items;
   final double totalAmount;
   final double? subtotalAmount;
-  final double discountAmount;
-  final String couponCode;
+  final double? _discountAmount;
+  final String? _couponCode;
   final DateTime createdAt;
   final OrderStatus status;
   final DateTime? updatedAt;
@@ -454,6 +455,10 @@ class OrderModel {
 
   double get effectiveSubtotal =>
       subtotalAmount ?? totalAmount + discountAmount;
+
+  double get discountAmount => _discountAmount ?? 0;
+
+  String get couponCode => _couponCode ?? '';
 
   bool get hasDiscount => couponCode.trim().isNotEmpty && discountAmount > 0;
 
