@@ -7,7 +7,6 @@ import '../../data/models/order_model.dart';
 import '../../data/models/user_model.dart';
 import '../../state/auth_controller.dart';
 import '../../state/cart_controller.dart';
-import '../../state/order_alert_controller.dart';
 import '../../state/order_controller.dart';
 import 'shell_destinations.dart';
 
@@ -43,14 +42,6 @@ class _ShellChrome extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
   final AppUser user;
 
-  OrderAlertController? _alertsOrNull(BuildContext context) {
-    try {
-      return Provider.of<OrderAlertController>(context, listen: false);
-    } catch (_) {
-      return null;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final visible = destinationsFor(user);
@@ -65,9 +56,6 @@ class _ShellChrome extends StatelessWidget {
     void onSelect(int visibleIndex) {
       HapticFeedback.selectionClick();
       final dest = visible[visibleIndex];
-      if (dest.branchIndex == ShellBranches.orders) {
-        _alertsOrNull(context)?.markAllRead();
-      }
       navigationShell.goBranch(
         dest.branchIndex,
         initialLocation: visibleIndex == selected,
@@ -141,12 +129,10 @@ class _ShellChrome extends StatelessWidget {
       return Consumer<OrderController>(
         builder: (context, orders, _) {
           final user = context.read<AuthController>().currentUser;
-          var count = 0;
-          if (user?.canManageOrders == true) {
-            count = orders.countByStatus(OrderStatus.placed);
-          } else {
-            count = _alertsOrNull(context)?.unreadCount ?? 0;
-          }
+          // Staff: badge new "placed" orders. Customer: no alert provider.
+          final count = user?.canManageOrders == true
+              ? orders.countByStatus(OrderStatus.placed)
+              : 0;
           if (count <= 0) return icon;
           return Badge(
             label: Text(count > 99 ? '99+' : '$count'),
