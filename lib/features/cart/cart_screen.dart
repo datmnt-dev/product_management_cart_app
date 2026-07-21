@@ -447,6 +447,21 @@ class _CheckoutPayload {
   final String couponCode;
 }
 
+@visibleForTesting
+Widget buildCheckoutSheetForTest({
+  required int totalQuantity,
+  required double totalPrice,
+  required String defaultName,
+  required Future<AppliedCoupon> Function(String code) onPreviewCoupon,
+}) {
+  return _CheckoutSheet(
+    totalQuantity: totalQuantity,
+    totalPrice: totalPrice,
+    defaultName: defaultName,
+    onPreviewCoupon: onPreviewCoupon,
+  );
+}
+
 class _CheckoutSheet extends StatefulWidget {
   const _CheckoutSheet({
     required this.totalQuantity,
@@ -606,6 +621,10 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
                   const SizedBox(width: 8),
                   FilledButton.tonal(
                     onPressed: _checkingCoupon ? null : _applyCoupon,
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(96, 48),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                    ),
                     child: _checkingCoupon
                         ? const SizedBox(
                             width: 18,
