@@ -17,7 +17,7 @@ class AppShell extends StatelessWidget {
 
   final StatefulNavigationShell navigationShell;
 
-  /// Prefer bottom nav on phone/tablet portrait; rail on desktop web.
+  /// Prefer bottom nav on phone/tablet; rail on desktop web.
   static const double _railBreakpoint = 840;
 
   @override
@@ -27,99 +27,11 @@ class AppShell extends StatelessWidget {
       return const Scaffold(body: SizedBox.shrink());
     }
 
-    // Snackbars for status changes (optional if provider missing mid-reload).
-    return _OrderAlertSnackHost(
+    return _ShellChrome(
       navigationShell: navigationShell,
-      child: _ShellChrome(
-        navigationShell: navigationShell,
-        user: user,
-      ),
+      user: user,
     );
   }
-}
-
-/// Listens for new order alerts and shows a floating SnackBar.
-class _OrderAlertSnackHost extends StatefulWidget {
-  const _OrderAlertSnackHost({
-    required this.navigationShell,
-    required this.child,
-  });
-
-  final StatefulNavigationShell navigationShell;
-  final Widget child;
-
-  @override
-  State<_OrderAlertSnackHost> createState() => _OrderAlertSnackHostState();
-}
-
-class _OrderAlertSnackHostState extends State<_OrderAlertSnackHost> {
-  OrderAlertController? _alerts;
-  int _lastUnread = 0;
-  var _attached = false;
-
-  OrderAlertController? _tryRead(BuildContext context) {
-    try {
-      return Provider.of<OrderAlertController>(context, listen: false);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final alerts = _tryRead(context);
-    if (alerts == null) {
-      _detach();
-      return;
-    }
-    if (!identical(_alerts, alerts)) {
-      _detach();
-      _alerts = alerts;
-      _lastUnread = alerts.unreadCount;
-      _alerts!.addListener(_onAlerts);
-      _attached = true;
-    }
-  }
-
-  void _detach() {
-    if (_attached && _alerts != null) {
-      _alerts!.removeListener(_onAlerts);
-    }
-    _alerts = null;
-    _attached = false;
-  }
-
-  void _onAlerts() {
-    final alerts = _alerts;
-    if (alerts == null || !mounted) return;
-    if (alerts.unreadCount > _lastUnread && alerts.latest != null) {
-      final latest = alerts.latest!;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(latest.message),
-          behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: 'Đơn',
-            onPressed: () {
-              widget.navigationShell.goBranch(ShellBranches.orders);
-              alerts.markAllRead();
-            },
-          ),
-        ),
-      );
-    }
-    _lastUnread = alerts.unreadCount;
-  }
-
-  @override
-  void dispose() {
-    _detach();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => widget.child;
 }
 
 class _ShellChrome extends StatelessWidget {
@@ -131,15 +43,21 @@ class _ShellChrome extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
   final AppUser user;
 
+  OrderAlertController? _alertsOrNull(BuildContext context) {
+    try {
+      return Provider.of<OrderAlertController>(context, listen: false);
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final visible = destinationsFor(user);
     var selected = visible.indexWhere(
       (d) => d.branchIndex == navigationShell.currentIndex,
     );
-    if (selected < 0) {
-      selected = 0;
-    }
+    if (selected < 0) selected = 0;
 
     final width = MediaQuery.sizeOf(context).width;
     final useRail = width >= AppShell._railBreakpoint;
@@ -148,9 +66,7 @@ class _ShellChrome extends StatelessWidget {
       HapticFeedback.selectionClick();
       final dest = visible[visibleIndex];
       if (dest.branchIndex == ShellBranches.orders) {
-        try {
-          context.read<OrderAlertController>().markAllRead();
-        } catch (_) {}
+        _alertsOrNull(context)?.markAllRead();
       }
       navigationShell.goBranch(
         dest.branchIndex,
@@ -229,11 +145,7 @@ class _ShellChrome extends StatelessWidget {
           if (user?.canManageOrders == true) {
             count = orders.countByStatus(OrderStatus.placed);
           } else {
-            try {
-              count = context.read<OrderAlertController>().unreadCount;
-            } catch (_) {
-              count = 0;
-            }
+            count = _alertsOrNull(context)?.unreadCount ?? 0;
           }
           if (count <= 0) return icon;
           return Badge(

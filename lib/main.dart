@@ -50,11 +50,13 @@ Future<void> main() async {
   productController.addListener(syncCart);
   syncCart();
 
+  // ignore: avoid_print
+  print('StoreFlow boot: providers ready (OrderAlertController in main)');
+
   runApp(
     MultiProvider(
       providers: [
         Provider<FirestoreDatabase>.value(value: database),
-        Provider<SharedPreferences>.value(value: preferences),
         ChangeNotifierProvider<AuthController>.value(value: authController),
         ChangeNotifierProvider<ProductController>.value(
           value: productController,
