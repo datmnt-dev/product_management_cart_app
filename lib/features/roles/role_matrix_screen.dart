@@ -14,9 +14,7 @@ class RoleMatrixScreen extends StatelessWidget {
     final tt = Theme.of(context).textTheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Phân quyền truy cập'),
-      ),
+      appBar: AppBar(title: const Text('Phân quyền truy cập')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
@@ -250,10 +248,7 @@ class _RolePermissionsCard extends StatelessWidget {
               label: 'Quản lý kho (thêm / sửa sản phẩm)',
               allowed: role.canManageProducts,
             ),
-            _AccessRow(
-              label: 'Xóa sản phẩm',
-              allowed: role.canDeleteProducts,
-            ),
+            _AccessRow(label: 'Xóa sản phẩm', allowed: role.canDeleteProducts),
             _AccessRow(
               label: 'Mua sắm & checkout (giỏ hàng)',
               allowed: role.canShop,

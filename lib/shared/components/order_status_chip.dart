@@ -4,7 +4,11 @@ import '../../core/theme/app_radii.dart';
 import '../../data/models/order_model.dart';
 
 class OrderStatusChip extends StatelessWidget {
-  const OrderStatusChip({required this.status, this.compact = false, super.key});
+  const OrderStatusChip({
+    required this.status,
+    this.compact = false,
+    super.key,
+  });
 
   final OrderStatus status;
   final bool compact;

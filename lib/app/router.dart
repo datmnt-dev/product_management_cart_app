@@ -64,9 +64,7 @@ GoRouter buildAppRouter(AuthController authController) {
           return AppRoutes.products;
         }
 
-        if (path == AppRoutes.orders &&
-            !user.canShop &&
-            !user.canManageOrders) {
+        if (path == AppRoutes.orders && !user.canShop) {
           return AppRoutes.products;
         }
 
@@ -156,9 +154,7 @@ GoRouter buildAppRouter(AuthController authController) {
         path: AppRoutes.editProduct,
         parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) {
-          return ProductFormScreen(
-            productId: state.pathParameters['id'] ?? '',
-          );
+          return ProductFormScreen(productId: state.pathParameters['id'] ?? '');
         },
       ),
       GoRoute(

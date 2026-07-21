@@ -21,15 +21,15 @@ class OrderTrackingTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final historyByStatus = {
-      for (final e in order.statusHistory) e.status: e,
-    };
+    final historyByStatus = {for (final e in order.statusHistory) e.status: e};
     final cancelled = order.status == OrderStatus.cancelled;
 
     final steps = cancelled
         ? [
             ...order.statusHistory.map((e) => e.status),
-            if (!order.statusHistory.any((e) => e.status == OrderStatus.cancelled))
+            if (!order.statusHistory.any(
+              (e) => e.status == OrderStatus.cancelled,
+            ))
               OrderStatus.cancelled,
           ]
         : pipeline;
@@ -39,9 +39,9 @@ class OrderTrackingTimeline extends StatelessWidget {
       children: [
         Text(
           'Theo dõi trạng thái',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w900,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: AppSpacing.sm),
         ...List.generate(steps.length, (index) {
@@ -55,7 +55,9 @@ class OrderTrackingTimeline extends StatelessWidget {
           final isCurrent = status == order.status;
           final color = isCurrent
               ? status.color
-              : (isDone ? status.color.withValues(alpha: .7) : cs.outlineVariant);
+              : (isDone
+                    ? status.color.withValues(alpha: .7)
+                    : cs.outlineVariant);
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),

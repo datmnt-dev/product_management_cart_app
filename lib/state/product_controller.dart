@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../core/utils/load_status.dart';
 import '../data/models/product_model.dart';
+import '../data/models/user_role.dart';
 import '../data/services/firestore_database.dart';
 import 'auth_controller.dart';
 import 'product_filters.dart';
@@ -19,6 +20,7 @@ class ProductController extends ChangeNotifier {
   final FirestoreDatabase _database;
   final AuthController _authController;
   StreamSubscription<List<Product>>? _subscription;
+  String? _activeUserKey;
 
   List<Product> _products = [];
   String _searchQuery = '';
@@ -174,12 +176,21 @@ class ProductController extends ChangeNotifier {
 
   void _watchProductsForCurrentUser() {
     _subscription?.cancel();
-    if (!_authController.isAuthenticated) {
+    final user = _authController.currentUser;
+    if (user == null) {
+      _activeUserKey = null;
       _products = [];
+      _resetFiltersSilently();
       _status = LoadStatus.idle;
       _errorMessage = null;
       notifyListeners();
       return;
+    }
+
+    final userKey = '${user.email.trim().toLowerCase()}|${user.role.key}';
+    if (_activeUserKey != userKey) {
+      _activeUserKey = userKey;
+      _resetFiltersSilently();
     }
 
     _status = LoadStatus.loading;
@@ -200,6 +211,14 @@ class ProductController extends ChangeNotifier {
         notifyListeners();
       },
     );
+  }
+
+  void _resetFiltersSilently() {
+    _searchQuery = '';
+    _sort = ProductSort.newest;
+    _category = null;
+    _statusFilter = null;
+    _inStockOnly = false;
   }
 
   static String _createSku(DateTime now) {

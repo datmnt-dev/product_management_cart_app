@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../models/order_model.dart';
 import '../models/product_model.dart';
@@ -7,12 +8,18 @@ import '../models/user_model.dart';
 import '../models/user_role.dart';
 
 class FirestoreDatabase {
-  FirestoreDatabase({FirebaseAuth? auth, FirebaseFirestore? firestore})
-    : _auth = auth ?? FirebaseAuth.instance,
-      _firestore = firestore ?? FirebaseFirestore.instance;
+  FirestoreDatabase({
+    FirebaseAuth? auth,
+    FirebaseFirestore? firestore,
+    GoogleSignIn? googleSignIn,
+  }) : _auth = auth ?? FirebaseAuth.instance,
+       _firestore = firestore ?? FirebaseFirestore.instance,
+       _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
+  final GoogleSignIn _googleSignIn;
+  var _googleInitialized = false;
 
   CollectionReference<Map<String, dynamic>> get _users =>
       _firestore.collection('users');
@@ -96,7 +103,59 @@ class FirestoreDatabase {
     return appUser;
   }
 
-  Future<void> logout() => _auth.signOut();
+  Future<AppUser> signInWithGoogle() async {
+    if (!_googleInitialized) {
+      await _googleSignIn.initialize();
+      _googleInitialized = true;
+    }
+
+    final googleAccount = await _googleSignIn.authenticate();
+    final idToken = googleAccount.authentication.idToken;
+    if (idToken == null || idToken.isEmpty) {
+      throw FirebaseAuthException(
+        code: 'missing-google-id-token',
+        message: 'Không lấy được Google ID token.',
+      );
+    }
+
+    final credential = GoogleAuthProvider.credential(idToken: idToken);
+    final userCredential = await _auth.signInWithCredential(credential);
+    final firebaseUser = userCredential.user!;
+
+    final existing = await getUserById(firebaseUser.uid);
+    if (existing != null) {
+      return existing;
+    }
+
+    final email = firebaseUser.email?.trim().toLowerCase();
+    if (email == null || email.isEmpty) {
+      await _auth.signOut();
+      throw FirebaseAuthException(
+        code: 'missing-google-email',
+        message: 'Tài khoản Google không có email hợp lệ.',
+      );
+    }
+
+    final appUser = AppUser(
+      id: firebaseUser.uid,
+      fullName: firebaseUser.displayName?.trim().isNotEmpty == true
+          ? firebaseUser.displayName!.trim()
+          : email.split('@').first,
+      email: email,
+      passwordHash: '',
+      role: AppRole.customer,
+      createdAt: DateTime.now(),
+    );
+    await saveUser(appUser);
+    return appUser;
+  }
+
+  Future<void> logout() async {
+    await _auth.signOut();
+    if (_googleInitialized) {
+      await _googleSignIn.signOut();
+    }
+  }
 
   Future<void> saveUser(AppUser user) async {
     await _users.doc(user.id).set(user.toMap(), SetOptions(merge: true));
@@ -206,7 +265,7 @@ class FirestoreDatabase {
     );
 
     final orderRef = _orders.doc(normalized.id);
-    final payload = normalized.toMap();
+    late OrderModel committedOrder;
 
     await _firestore.runTransaction((transaction) async {
       // All reads first (Firestore transaction requirement).
@@ -235,6 +294,7 @@ class FirestoreDatabase {
         }
       }
 
+      final liveLines = <OrderLine>[];
       for (final entry in quantitiesByProductId.entries) {
         final ref = productRefs[entry.key]!;
         final snapshot = snapshots[entry.key]!;
@@ -242,16 +302,34 @@ class FirestoreDatabase {
           'id': snapshot.id,
           ...snapshot.data()!,
         });
+        liveLines.add(
+          OrderLine(
+            productId: product.id,
+            name: product.name,
+            unitPrice: product.price,
+            quantity: entry.value,
+            imageUrl: product.imageUrl,
+            category: product.category.key,
+          ),
+        );
         transaction.update(ref, {
           'stockQuantity': product.stockQuantity - entry.value,
           'updatedAt': FieldValue.serverTimestamp(),
         });
       }
 
-      transaction.set(orderRef, payload);
+      final liveTotal = liveLines.fold<double>(
+        0,
+        (total, item) => total + item.totalPrice,
+      );
+      committedOrder = normalized.copyWith(
+        items: liveLines,
+        totalAmount: liveTotal,
+      );
+      transaction.set(orderRef, committedOrder.toMap());
     });
 
-    return normalized;
+    return committedOrder;
   }
 
   /// Cancel order and restore stock in one transaction (idempotent via stockRestored).
@@ -275,13 +353,7 @@ class FirestoreDatabase {
         .toList();
 
     final when = DateTime.now();
-    final cancelled = order.withStatusTransition(
-      next: OrderStatus.cancelled,
-      byEmail: actorEmail.trim().toLowerCase(),
-      note: note,
-      at: when,
-      stockRestored: true,
-    );
+    late OrderModel committedOrder;
 
     await _firestore.runTransaction((transaction) async {
       final orderSnap = await transaction.get(orderRef);
@@ -334,10 +406,15 @@ class FirestoreDatabase {
         at: when,
         stockRestored: true,
       );
-      transaction.set(orderRef, finalCancelled.toMap(), SetOptions(merge: true));
+      committedOrder = finalCancelled;
+      transaction.set(
+        orderRef,
+        finalCancelled.toMap(),
+        SetOptions(merge: true),
+      );
     });
 
-    return cancelled;
+    return committedOrder;
   }
 
   Stream<List<OrderModel>> watchOrders({String? userEmail}) {

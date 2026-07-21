@@ -5,10 +5,8 @@ import 'package:provider/provider.dart';
 import '../../app/router.dart';
 import '../../core/theme/app_radii.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/utils/formatters.dart';
 import '../../core/utils/load_status.dart';
 import '../../data/models/order_model.dart';
-import '../../data/models/user_role.dart';
 import '../../shared/components/order_expandable_tile.dart';
 import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/app_loading_state.dart';
@@ -16,18 +14,15 @@ import '../../shared/widgets/empty_state.dart';
 import '../../state/auth_controller.dart';
 import '../../state/order_controller.dart';
 
-/// Role-aware orders entry:
-/// - Customer: only own history
-/// - Manager / Admin: board of ALL store orders (system ops; admin = full system)
+/// Customer-only order history.
+///
+/// Staff order operations live in [StatisticsScreen] and `/orders` is guarded
+/// to shoppers in the router.
 class OrderHistoryScreen extends StatelessWidget {
   const OrderHistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final user = context.watch<AuthController>().currentUser;
-    if (user != null && user.canManageOrders) {
-      return _StaffOrderBoard(isAdmin: user.role == AppRole.admin);
-    }
     return const _CustomerOrderHistory();
   }
 }
@@ -112,6 +107,7 @@ class _CustomerOrderHistory extends StatelessWidget {
                         s: allMine.where((o) => o.status == s).length,
                     },
                     onSelected: controller.setStatusFilter,
+                    showAllCount: allMine.length,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   Text(
@@ -157,8 +153,9 @@ class _CustomerSummary extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final active = orders.where((o) => !o.status.isTerminal).length;
     final done = orders.where((o) => o.status == OrderStatus.delivered).length;
-    final cancelled =
-        orders.where((o) => o.status == OrderStatus.cancelled).length;
+    final cancelled = orders
+        .where((o) => o.status == OrderStatus.cancelled)
+        .length;
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
@@ -191,9 +188,9 @@ class _MiniStat extends StatelessWidget {
         children: [
           Text(
             value,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 2),
           Text(
@@ -204,238 +201,6 @@ class _MiniStat extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Staff board ───────────────────────────────────────────────────────────────
-
-class _StaffOrderBoard extends StatefulWidget {
-  const _StaffOrderBoard({required this.isAdmin});
-
-  final bool isAdmin;
-
-  @override
-  State<_StaffOrderBoard> createState() => _StaffOrderBoardState();
-}
-
-class _StaffOrderBoardState extends State<_StaffOrderBoard> {
-  final _search = TextEditingController();
-  String _query = '';
-
-  @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final title = widget.isAdmin
-        ? 'Điều phối đơn · Toàn hệ thống'
-        : 'Bảng điều phối đơn';
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title),
-        actions: [
-          if (widget.isAdmin)
-            IconButton(
-              tooltip: 'Ma trận phân quyền',
-              onPressed: () => context.go(AppRoutes.roles),
-              icon: const Icon(Icons.shield_outlined),
-            ),
-          IconButton(
-            tooltip: 'Thống kê doanh thu',
-            onPressed: () => context.go(AppRoutes.statistics),
-            icon: const Icon(Icons.analytics_outlined),
-          ),
-        ],
-      ),
-      body: Consumer<OrderController>(
-        builder: (context, controller, _) {
-          if (controller.status == LoadStatus.loading &&
-              controller.orders.isEmpty) {
-            return const AppLoadingState(message: 'Đang tải bảng đơn...');
-          }
-
-          if (controller.hasError && controller.orders.isEmpty) {
-            return AppErrorState(
-              title: 'Không tải được đơn hàng',
-              message:
-                  controller.errorMessage ??
-                  'Không thể tải đơn hàng. Kiểm tra kết nối mạng và thử lại.',
-              onRetry: controller.retry,
-            );
-          }
-
-          if (controller.orders.isEmpty) {
-            return const EmptyState(
-              icon: Icons.inbox_outlined,
-              title: 'Chưa có đơn nào',
-              message: 'Khi khách đặt hàng, đơn sẽ xuất hiện tại đây để xử lý.',
-            );
-          }
-
-          final selected = controller.statusFilter;
-          final list = controller.ordersByStatus(selected, query: _query);
-          final inbox = controller.countByStatus(OrderStatus.placed);
-
-          return Align(
-            alignment: Alignment.topCenter,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 1000),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md,
-                      AppSpacing.xs,
-                      AppSpacing.md,
-                      AppSpacing.xs,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (inbox > 0)
-                          Container(
-                            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              color: cs.tertiaryContainer.withValues(alpha: .55),
-                              borderRadius: AppRadii.borderMd,
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.mark_email_unread_outlined,
-                                  color: cs.onTertiaryContainer,
-                                  size: 18,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    '$inbox đơn mới chờ xác nhận',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      color: cs.onTertiaryContainer,
-                                    ),
-                                  ),
-                                ),
-                                TextButton(
-                                  onPressed: () => controller.setStatusFilter(
-                                    OrderStatus.placed,
-                                  ),
-                                  child: const Text('Xem'),
-                                ),
-                              ],
-                            ),
-                          ),
-                        TextField(
-                          controller: _search,
-                          onChanged: (v) => setState(() => _query = v),
-                          decoration: InputDecoration(
-                            hintText: 'Tìm mã đơn, email, SĐT, tên...',
-                            isDense: true,
-                            prefixIcon: const Icon(Icons.search),
-                            suffixIcon: _query.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear, size: 20),
-                                    onPressed: () {
-                                      _search.clear();
-                                      setState(() => _query = '');
-                                    },
-                                  )
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        _StatusFilterBar(
-                          selected: selected,
-                          counts: {
-                            for (final s in OrderStatus.values)
-                              s: controller.countByStatus(s),
-                          },
-                          onSelected: controller.setStatusFilter,
-                          showAllCount: controller.orders.length,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md,
-                      0,
-                      AppSpacing.md,
-                      AppSpacing.xs,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            selected == null
-                                ? 'Tất cả đơn (${list.length})'
-                                : '${selected.shortLabel} (${list.length})',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w900),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          formatCurrency(
-                            list
-                                .where((o) => o.status.countsTowardRevenue)
-                                .fold<double>(0, (s, o) => s + o.totalAmount),
-                          ),
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            color: cs.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: list.isEmpty
-                        ? const EmptyState(
-                            icon: Icons.filter_alt_off_outlined,
-                            title: 'Không có đơn phù hợp',
-                            message:
-                                'Thử đổi cột trạng thái hoặc từ khóa tìm kiếm.',
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(
-                              AppSpacing.md,
-                              0,
-                              AppSpacing.md,
-                              AppSpacing.xxxl,
-                            ),
-                            itemCount: list.length,
-                            itemBuilder: (context, i) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: OrderExpandableTile(
-                                  order: list[i],
-                                  showCustomerEmail: true,
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
       ),
     );
   }

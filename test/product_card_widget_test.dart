@@ -31,9 +31,8 @@ Widget _harness({required Widget child, required CartController cart}) {
     routes: [
       GoRoute(
         path: '/',
-        builder: (context, state) => Scaffold(
-          body: SizedBox(width: 200, height: 320, child: child),
-        ),
+        builder: (context, state) =>
+            Scaffold(body: SizedBox(width: 200, height: 320, child: child)),
       ),
       GoRoute(
         path: '/products/:id',

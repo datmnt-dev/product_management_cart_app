@@ -79,6 +79,35 @@ service cloud.firestore {
           .hasOnly(['status', 'updatedAt', 'statusHistory', 'stockRestored']);
       }
 
+      // Staff owns store fulfillment: receive, prepare, hand over to shipping.
+      // Customer alone confirms actual receipt.
+      function staffStatusUpdateOk() {
+        return isStaff()
+          && onlyStatusFieldsChanged()
+          && (
+            (
+              resource.data.status in ['placed', 'pending']
+              && request.resource.data.status in ['confirmed', 'cancelled']
+            )
+            || (
+              resource.data.status == 'confirmed'
+              && request.resource.data.status in ['preparing', 'cancelled']
+            )
+            || (
+              resource.data.status == 'preparing'
+              && request.resource.data.status in ['shipping', 'cancelled']
+            )
+            || (
+              resource.data.status == 'shipping'
+              && request.resource.data.status == 'cancelled'
+            )
+          )
+          && (
+            request.resource.data.status != 'cancelled'
+            || request.resource.data.stockRestored == true
+          );
+      }
+
       // Customer may cancel early or confirm delivery when shipping.
       function customerStatusUpdateOk() {
         return isCustomer()
@@ -122,7 +151,7 @@ service cloud.firestore {
         && request.resource.data.items is list
         && request.resource.data.items.size() > 0
         && request.resource.data.status == 'placed';
-      allow update: if isStaff() || customerStatusUpdateOk();
+      allow update: if staffStatusUpdateOk() || customerStatusUpdateOk();
       allow delete: if isStaff();
     }
 

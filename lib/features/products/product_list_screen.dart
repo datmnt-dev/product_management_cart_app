@@ -53,9 +53,7 @@ class ProductListScreen extends StatelessWidget {
             ),
           ],
         ),
-        actions: const [
-          _AccountMenu(),
-        ],
+        actions: const [_AccountMenu()],
       ),
       floatingActionButton: canManage
           ? FloatingActionButton.extended(
@@ -109,8 +107,8 @@ class _AccountMenu extends StatelessWidget {
         child: Icon(
           user?.role.icon ?? Icons.account_circle_outlined,
           size: 18,
-          color: user?.role.accentColor ??
-              Theme.of(context).colorScheme.primary,
+          color:
+              user?.role.accentColor ?? Theme.of(context).colorScheme.primary,
         ),
       ),
     );
@@ -166,9 +164,9 @@ class _CompactRoleStrip extends StatelessWidget {
                   'Xin chào, ${user.fullName}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
                 ),
                 Text(
                   role.vietnameseLabel,

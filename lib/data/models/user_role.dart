@@ -93,8 +93,8 @@ extension AppRoleX on AppRole {
     return this == AppRole.admin || this == AppRole.manager;
   }
 
-  /// Admin + Manager: see ALL orders and advance/cancel (ops board).
-  /// Customer uses [canShop] for own history only — never all-orders stream.
+  /// Admin + Manager operate all orders from the Statistics workflow.
+  /// The `/orders` route remains customer-only for personal history.
   bool get canManageOrders {
     return this == AppRole.admin || this == AppRole.manager;
   }

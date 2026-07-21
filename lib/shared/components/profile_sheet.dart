@@ -62,9 +62,7 @@ class ProfileSheet extends StatelessWidget {
                     ),
                     Text(
                       user.email,
-                      style: tt.bodySmall?.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
+                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -88,10 +86,7 @@ class ProfileSheet extends StatelessWidget {
             icon: Icon(Icons.logout, color: cs.error),
             label: Text(
               'Đăng xuất',
-              style: TextStyle(
-                color: cs.error,
-                fontWeight: FontWeight.w800,
-              ),
+              style: TextStyle(color: cs.error, fontWeight: FontWeight.w800),
             ),
           ),
         ],

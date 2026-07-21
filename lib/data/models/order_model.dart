@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 /// ```
 /// placed → confirmed → preparing → shipping → delivered
 ///    ↘ cancelled (from placed / confirmed)
+///
+/// Staff owns the operational steps up to `shipping`; the customer confirms
+/// receipt by moving `shipping` to `delivered`.
 /// ```
 enum OrderStatus {
   placed,
@@ -45,7 +48,7 @@ extension OrderStatusX on OrderStatus {
       case OrderStatus.shipping:
         return 'Đang giao hàng';
       case OrderStatus.delivered:
-        return 'Đã giao / hoàn thành';
+        return 'Khách đã nhận / hoàn thành';
       case OrderStatus.cancelled:
         return 'Đã hủy';
     }
@@ -56,13 +59,13 @@ extension OrderStatusX on OrderStatus {
       case OrderStatus.placed:
         return 'Đã gửi';
       case OrderStatus.confirmed:
-        return 'Đã nhận';
+        return 'Shop nhận';
       case OrderStatus.preparing:
         return 'Chuẩn bị';
       case OrderStatus.shipping:
         return 'Đang giao';
       case OrderStatus.delivered:
-        return 'Hoàn thành';
+        return 'Khách nhận';
       case OrderStatus.cancelled:
         return 'Đã hủy';
     }
@@ -79,7 +82,7 @@ extension OrderStatusX on OrderStatus {
       case OrderStatus.shipping:
         return 'Đơn đang trên đường giao đến khách.';
       case OrderStatus.delivered:
-        return 'Khách đã nhận hàng. Đơn hoàn tất.';
+        return 'Khách đã xác nhận nhận hàng. Đơn hoàn tất.';
       case OrderStatus.cancelled:
         return 'Đơn đã bị hủy.';
     }
@@ -134,7 +137,6 @@ extension OrderStatusX on OrderStatus {
       case OrderStatus.preparing:
         return OrderStatus.shipping;
       case OrderStatus.shipping:
-        return OrderStatus.delivered;
       case OrderStatus.delivered:
       case OrderStatus.cancelled:
         return null;
@@ -151,8 +153,6 @@ extension OrderStatusX on OrderStatus {
         return 'Bắt đầu chuẩn bị';
       case OrderStatus.shipping:
         return 'Bàn giao vận chuyển';
-      case OrderStatus.delivered:
-        return 'Xác nhận đã giao';
       default:
         return null;
     }
@@ -194,12 +194,7 @@ class OrderStatusEvent {
   final String note;
 
   Map<String, dynamic> toMap() {
-    return {
-      'status': status.key,
-      'at': at,
-      'byEmail': byEmail,
-      'note': note,
-    };
+    return {'status': status.key, 'at': at, 'byEmail': byEmail, 'note': note};
   }
 
   factory OrderStatusEvent.fromMap(Map<dynamic, dynamic> map) {
@@ -227,6 +222,7 @@ class OrderLine {
   final double unitPrice;
   final int quantity;
   final String imageUrl;
+
   /// Snapshot category key at checkout (stable stats without product join).
   final String category;
 
@@ -286,6 +282,7 @@ class OrderModel {
   final OrderStatus status;
   final DateTime? updatedAt;
   final List<OrderStatusEvent> statusHistory;
+
   /// True after cancel restock so we never restore stock twice.
   final bool stockRestored;
   final String customerName;

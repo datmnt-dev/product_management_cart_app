@@ -9,6 +9,7 @@ import '../../core/utils/formatters.dart';
 import '../../core/utils/load_status.dart';
 import '../../data/models/order_model.dart';
 import '../../data/models/product_model.dart';
+import '../../shared/components/order_expandable_tile.dart';
 import '../../shared/widgets/app_error_state.dart';
 import '../../shared/widgets/app_loading_state.dart';
 import '../../shared/widgets/empty_state.dart';
@@ -22,26 +23,8 @@ class StatisticsScreen extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
 
-    final narrow = MediaQuery.sizeOf(context).width < 480;
-
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Báo cáo & Thống kê'),
-        actions: [
-          if (narrow)
-            IconButton(
-              tooltip: 'Bảng đơn',
-              onPressed: () => context.go(AppRoutes.orders),
-              icon: const Icon(Icons.view_kanban_outlined),
-            )
-          else
-            TextButton.icon(
-              onPressed: () => context.go(AppRoutes.orders),
-              icon: const Icon(Icons.view_kanban_outlined, size: 18),
-              label: const Text('Bảng đơn'),
-            ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Báo cáo & Thống kê')),
       body: Consumer<OrderController>(
         builder: (context, orders, _) {
           if (orders.status == LoadStatus.loading && orders.orders.isEmpty) {
@@ -73,8 +56,9 @@ class StatisticsScreen extends StatelessWidget {
           }
 
           final filtered = orders.filteredOrders;
-          final revenueOrders =
-              filtered.where((o) => o.status.countsTowardRevenue).toList();
+          final revenueOrders = filtered
+              .where((o) => o.status.countsTowardRevenue)
+              .toList();
           final width = MediaQuery.sizeOf(context).width;
           final wide = width >= 900;
 
@@ -122,6 +106,23 @@ class StatisticsScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 20),
+                  Text(
+                    'Bộ lọc trạng thái',
+                    style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 10),
+                  _OrderStatusFilterBar(
+                    selected: orders.statusFilter,
+                    counts: {
+                      for (final status in OrderStatus.values)
+                        status: orders.orders
+                            .where((order) => order.status == status)
+                            .length,
+                    },
+                    onSelected: orders.setStatusFilter,
+                    showAllCount: orders.orders.length,
+                  ),
+                  const SizedBox(height: 20),
                   _StatusMixBar(orders: filtered),
                   const SizedBox(height: 20),
                   if (wide)
@@ -162,10 +163,7 @@ class StatisticsScreen extends StatelessWidget {
                     style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
                   const SizedBox(height: 14),
-                  _SalesBarChart(
-                    orders: revenueOrders,
-                    filter: orders.filter,
-                  ),
+                  _SalesBarChart(orders: revenueOrders, filter: orders.filter),
                   const SizedBox(height: 28),
                   Text(
                     'Sản phẩm bán chạy',
@@ -181,28 +179,116 @@ class StatisticsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 14),
                   _BestSellersList(orders: revenueOrders),
-                  const SizedBox(height: 24),
-                  Card(
-                    child: ListTile(
-                      leading: Icon(Icons.receipt_long, color: cs.primary),
-                      title: const Text(
-                        'Quản lý đơn hàng',
-                        style: TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      subtitle: Text(
-                        '${orders.orders.length} đơn toàn hệ thống · '
-                        '${orders.countByStatus(OrderStatus.placed)} chờ xác nhận',
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.go(AppRoutes.orders),
-                    ),
-                  ),
+                  const SizedBox(height: 28),
+                  _StaffOrderList(orders: filtered),
                 ],
               ),
             ),
           );
         },
       ),
+    );
+  }
+}
+
+class _OrderStatusFilterBar extends StatelessWidget {
+  const _OrderStatusFilterBar({
+    required this.selected,
+    required this.onSelected,
+    this.counts = const {},
+    this.showAllCount = 0,
+  });
+
+  final OrderStatus? selected;
+  final ValueChanged<OrderStatus?> onSelected;
+  final Map<OrderStatus, int> counts;
+  final int showAllCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: FilterChip(
+              label: Text('Tất cả ($showAllCount)'),
+              selected: selected == null,
+              onSelected: (_) => onSelected(null),
+            ),
+          ),
+          for (final status in OrderStatus.values)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilterChip(
+                avatar: Icon(status.icon, size: 16, color: status.color),
+                label: Text('${status.shortLabel} (${counts[status] ?? 0})'),
+                selected: selected == status,
+                onSelected: (_) =>
+                    onSelected(selected == status ? null : status),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StaffOrderList extends StatelessWidget {
+  const _StaffOrderList({required this.orders});
+
+  final List<OrderModel> orders;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Danh sách đơn hàng',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: cs.primaryContainer,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '${orders.length}',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: cs.onPrimaryContainer,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (orders.isEmpty)
+          const EmptyState(
+            icon: Icons.filter_alt_off_outlined,
+            title: 'Không có đơn phù hợp',
+            message: 'Thử đổi bộ lọc thời gian hoặc trạng thái.',
+          )
+        else
+          ...orders.map(
+            (order) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: OrderExpandableTile(order: order, showCustomerEmail: true),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -218,10 +304,7 @@ class _MetricsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final revenue = revenueOrders.fold<double>(
-      0,
-      (s, o) => s + o.totalAmount,
-    );
+    final revenue = revenueOrders.fold<double>(0, (s, o) => s + o.totalAmount);
     final items = revenueOrders.fold<int>(0, (s, o) => s + o.totalQuantity);
     final aov = revenueOrders.isEmpty ? 0.0 : revenue / revenueOrders.length;
     final dates = revenueOrders
@@ -230,7 +313,7 @@ class _MetricsGrid extends StatelessWidget {
     final perDay = revenueOrders.isEmpty
         ? '0'
         : (revenueOrders.length / (dates.isEmpty ? 1 : dates.length))
-            .toStringAsFixed(1);
+              .toStringAsFixed(1);
 
     return Column(
       children: [
@@ -296,9 +379,9 @@ class _StatusMixBar extends StatelessWidget {
       children: [
         Text(
           'Phân bổ trạng thái',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-            fontWeight: FontWeight.w900,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
         ),
         const SizedBox(height: 10),
         ClipRRect(
@@ -390,9 +473,9 @@ class _CategoryRevenueCard extends StatelessWidget {
         children: [
           Text(
             'Doanh thu theo danh mục',
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w900,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 12),
           if (entries.isEmpty)
@@ -783,17 +866,18 @@ class _BestSellersList extends StatelessWidget {
       }
     }
 
-    final sortedList = qty.entries
-        .map(
-          (e) => _ProductSale(
-            id: e.key,
-            name: names[e.key] ?? e.key,
-            quantity: e.value,
-            revenue: rev[e.key] ?? 0,
-          ),
-        )
-        .toList()
-      ..sort((a, b) => b.quantity.compareTo(a.quantity));
+    final sortedList =
+        qty.entries
+            .map(
+              (e) => _ProductSale(
+                id: e.key,
+                name: names[e.key] ?? e.key,
+                quantity: e.value,
+                revenue: rev[e.key] ?? 0,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.quantity.compareTo(a.quantity));
 
     final bestSellers = sortedList.take(8).toList();
 
@@ -828,8 +912,9 @@ class _BestSellersList extends StatelessWidget {
             Builder(
               builder: (context) {
                 final item = bestSellers[i];
-                final percent =
-                    maxSales == 0 ? 0.0 : (item.quantity / maxSales);
+                final percent = maxSales == 0
+                    ? 0.0
+                    : (item.quantity / maxSales);
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

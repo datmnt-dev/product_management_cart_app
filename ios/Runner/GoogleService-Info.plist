@@ -2,18 +2,24 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CLIENT_ID</key>
+	<string>381218661910-vmf0u414au8t5b4qr620t9gfp9ml5t57.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.381218661910-vmf0u414au8t5b4qr620t9gfp9ml5t57</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>381218661910-pme8ha23co805n89nri7icpkgf09ueil.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
-	<string>AIzaSyDPqSdp8DMYrQ2JFMB8WhGud1djPyYXYaA</string>
+	<string>AIzaSyCiEe6yLu8zOu1og7IQfvoGRWz8pPZNno8</string>
 	<key>GCM_SENDER_ID</key>
-	<string>1061459193207</string>
+	<string>381218661910</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.productManagementCartApp</string>
+	<string>com.example.productManagementCartApp</string>
 	<key>PROJECT_ID</key>
-	<string>product-management-cart-bfacb</string>
+	<string>product-management-cart-app</string>
 	<key>STORAGE_BUCKET</key>
-	<string>product-management-cart-bfacb.firebasestorage.app</string>
+	<string>product-management-cart-app.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +31,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:1061459193207:ios:6346f14fc2fd796a100572</string>
+	<string>1:381218661910:ios:9ca169ce647559a444b737</string>
 </dict>
 </plist>

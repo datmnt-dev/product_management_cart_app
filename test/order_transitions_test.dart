@@ -3,7 +3,7 @@ import 'package:product_management_cart_app/data/models/order_model.dart';
 
 void main() {
   group('OrderTransitions', () {
-    test('staff advances along the happy path', () {
+    test('staff advances through store-owned fulfillment steps', () {
       expect(
         OrderTransitions.isValidTransition(
           from: OrderStatus.placed,
@@ -20,6 +20,7 @@ void main() {
         ),
         isTrue,
       );
+      expect(OrderStatus.shipping.nextStaffStatus, isNull);
       expect(
         OrderTransitions.isValidTransition(
           from: OrderStatus.preparing,
@@ -28,21 +29,21 @@ void main() {
         ),
         isTrue,
       );
-      expect(
-        OrderTransitions.isValidTransition(
-          from: OrderStatus.shipping,
-          to: OrderStatus.delivered,
-          isStaff: true,
-        ),
-        isTrue,
-      );
     });
 
-    test('staff cannot skip steps', () {
+    test('staff cannot skip steps or mark received for customer', () {
       expect(
         OrderTransitions.isValidTransition(
           from: OrderStatus.placed,
           to: OrderStatus.shipping,
+          isStaff: true,
+        ),
+        isFalse,
+      );
+      expect(
+        OrderTransitions.isValidTransition(
+          from: OrderStatus.shipping,
+          to: OrderStatus.delivered,
           isStaff: true,
         ),
         isFalse,

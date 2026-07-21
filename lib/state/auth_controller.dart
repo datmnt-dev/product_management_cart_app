@@ -85,14 +85,7 @@ class AuthController extends ChangeNotifier {
     try {
       final user = await _database.login(email: email, password: password);
       _currentUser = user;
-      _rememberMe = rememberMe;
-
-      await _preferences.setBool(_rememberMeKey, rememberMe);
-      if (rememberMe) {
-        await _preferences.setString(_rememberedEmailKey, user.email);
-      } else {
-        await _preferences.remove(_rememberedEmailKey);
-      }
+      await _persistSession(user: user, rememberMe: rememberMe);
 
       notifyListeners();
       return AuthActionResult(
@@ -107,6 +100,38 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  Future<AuthActionResult> signInWithGoogle({required bool rememberMe}) async {
+    try {
+      final user = await _database.signInWithGoogle();
+      _currentUser = user;
+      await _persistSession(user: user, rememberMe: rememberMe);
+
+      notifyListeners();
+      return AuthActionResult(
+        success: true,
+        message: 'Xin chào ${user.fullName} (${user.role.label}).',
+      );
+    } on FirebaseAuthException catch (error) {
+      if (error.code == 'missing-google-id-token' ||
+          error.code == 'missing-google-email') {
+        return AuthActionResult(
+          success: false,
+          message: error.message ?? 'Không thể đăng nhập bằng Google.',
+        );
+      }
+      return const AuthActionResult(
+        success: false,
+        message:
+            'Không thể đăng nhập bằng Google. Kiểm tra cấu hình Firebase và thử lại.',
+      );
+    } catch (_) {
+      return const AuthActionResult(
+        success: false,
+        message: 'Bạn đã hủy hoặc Google Sign-In chưa được cấu hình đúng.',
+      );
+    }
+  }
+
   Future<void> logout() async {
     _currentUser = null;
     _rememberMe = false;
@@ -114,5 +139,18 @@ class AuthController extends ChangeNotifier {
     await _preferences.setBool(_rememberMeKey, false);
     await _preferences.remove(_rememberedEmailKey);
     notifyListeners();
+  }
+
+  Future<void> _persistSession({
+    required AppUser user,
+    required bool rememberMe,
+  }) async {
+    _rememberMe = rememberMe;
+    await _preferences.setBool(_rememberMeKey, rememberMe);
+    if (rememberMe) {
+      await _preferences.setString(_rememberedEmailKey, user.email);
+    } else {
+      await _preferences.remove(_rememberedEmailKey);
+    }
   }
 }

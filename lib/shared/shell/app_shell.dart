@@ -3,11 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../../data/models/order_model.dart';
 import '../../data/models/user_model.dart';
 import '../../state/auth_controller.dart';
 import '../../state/cart_controller.dart';
-import '../../state/order_controller.dart';
 import 'shell_destinations.dart';
 
 /// Outer shell: tab chrome only. Branch screens keep nested Scaffolds.
@@ -26,18 +24,12 @@ class AppShell extends StatelessWidget {
       return const Scaffold(body: SizedBox.shrink());
     }
 
-    return _ShellChrome(
-      navigationShell: navigationShell,
-      user: user,
-    );
+    return _ShellChrome(navigationShell: navigationShell, user: user);
   }
 }
 
 class _ShellChrome extends StatelessWidget {
-  const _ShellChrome({
-    required this.navigationShell,
-    required this.user,
-  });
+  const _ShellChrome({required this.navigationShell, required this.user});
 
   final StatefulNavigationShell navigationShell;
   final AppUser user;
@@ -117,27 +109,7 @@ class _ShellChrome extends StatelessWidget {
         builder: (context, cart, _) {
           final count = cart.totalQuantity;
           if (count <= 0) return icon;
-          return Badge(
-            label: Text(count > 99 ? '99+' : '$count'),
-            child: icon,
-          );
-        },
-      );
-    }
-
-    if (d.branchIndex == ShellBranches.orders) {
-      return Consumer<OrderController>(
-        builder: (context, orders, _) {
-          final user = context.read<AuthController>().currentUser;
-          // Staff: badge new "placed" orders. Customer: no alert provider.
-          final count = user?.canManageOrders == true
-              ? orders.countByStatus(OrderStatus.placed)
-              : 0;
-          if (count <= 0) return icon;
-          return Badge(
-            label: Text(count > 99 ? '99+' : '$count'),
-            child: icon,
-          );
+          return Badge(label: Text(count > 99 ? '99+' : '$count'), child: icon);
         },
       );
     }

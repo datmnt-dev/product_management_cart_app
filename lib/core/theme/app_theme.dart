@@ -25,16 +25,17 @@ class AppTheme {
     final elevated = AppColors.elevated(brightness);
     final error = AppColors.error(brightness);
 
-    final scheme = ColorScheme.fromSeed(
-      seedColor: primary,
-      brightness: brightness,
-    ).copyWith(
-      primary: primary,
-      secondary: secondary,
-      tertiary: tertiary,
-      surface: surface,
-      error: error,
-    );
+    final scheme =
+        ColorScheme.fromSeed(
+          seedColor: primary,
+          brightness: brightness,
+        ).copyWith(
+          primary: primary,
+          secondary: secondary,
+          tertiary: tertiary,
+          surface: surface,
+          error: error,
+        );
 
     final base = ThemeData(
       useMaterial3: true,
@@ -175,7 +176,9 @@ class AppTheme {
         backgroundColor: elevated,
         surfaceTintColor: Colors.transparent,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadii.xxxl)),
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadii.xxxl),
+          ),
         ),
       ),
 
@@ -193,9 +196,7 @@ class AppTheme {
 
       // ─── Chips ─────────────────────────────────────────────────
       chipTheme: base.chipTheme.copyWith(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
       ),
 

@@ -7,6 +7,7 @@ class ProductImage extends StatelessWidget {
     this.width = 84,
     this.height = 84,
     this.borderRadius = 12,
+
     /// Logical width used for [Image.network.cacheWidth] when [width] is infinite.
     this.cacheLogicalWidth = 200,
     super.key,

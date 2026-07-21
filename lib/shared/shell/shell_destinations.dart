@@ -45,12 +45,10 @@ List<ShellDestination> destinationsFor(AppUser user) {
         icon: Icons.shopping_bag_outlined,
         selectedIcon: Icons.shopping_bag,
       ),
-    // Customer: own orders. Admin/Manager: system order board (all customers).
-    if (user.canShop || user.canManageOrders)
-      ShellDestination(
+    if (user.canShop)
+      const ShellDestination(
         branchIndex: ShellBranches.orders,
-        // Short labels for nav; screens use full titles.
-        label: user.canManageOrders ? 'Điều phối' : 'Đơn',
+        label: 'Đơn',
         icon: Icons.receipt_long_outlined,
         selectedIcon: Icons.receipt_long,
       ),

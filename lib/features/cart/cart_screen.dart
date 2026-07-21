@@ -59,10 +59,7 @@ class _CartScreenState extends State<CartScreen> {
                 onPressed: cart.isEmpty || _checkingOut
                     ? null
                     : () => _confirmClear(context, cart),
-                icon: Icon(
-                  Icons.delete_sweep_outlined,
-                  color: cs.error,
-                ),
+                icon: Icon(Icons.delete_sweep_outlined, color: cs.error),
               );
             },
           ),
@@ -142,8 +139,9 @@ class _CartScreenState extends State<CartScreen> {
                         SizedBox(
                           width: double.infinity,
                           child: FilledButton(
-                            onPressed:
-                                _checkingOut ? null : () => _checkout(context),
+                            onPressed: _checkingOut
+                                ? null
+                                : () => _checkout(context),
                             child: _checkingOut
                                 ? SizedBox(
                                     width: 22,
@@ -255,9 +253,9 @@ class _CartScreenState extends State<CartScreen> {
                 Text(
                   'Đã gửi đơn thành công!',
                   textAlign: TextAlign.center,
-                  style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: Theme.of(
+                    ctx,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
@@ -290,10 +288,7 @@ class _CartScreenState extends State<CartScreen> {
       if (!mounted) return;
       final message = _checkoutErrorMessage(e);
       messenger.showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
+        SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
       );
     } finally {
       if (mounted) setState(() => _checkingOut = false);
@@ -310,7 +305,9 @@ class _CartScreenState extends State<CartScreen> {
     if (raw.contains('Không đủ tồn kho') ||
         raw.contains('insufficient-stock') ||
         raw.contains('Sản phẩm không tồn tại')) {
-      return raw.replaceFirst('Bad state: ', '').replaceFirst('Exception: ', '');
+      return raw
+          .replaceFirst('Bad state: ', '')
+          .replaceFirst('Exception: ', '');
     }
     if (raw.contains('email')) {
       return 'Phiên đăng nhập thiếu email. Vui lòng đăng xuất và đăng nhập lại.';
@@ -491,9 +488,9 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
             children: [
               Text(
                 'Thông tin giao hàng',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(

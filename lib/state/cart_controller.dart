@@ -161,7 +161,8 @@ class CartController extends ChangeNotifier {
       for (final entry in decoded) {
         if (entry is! Map) continue;
         final id = entry['productId']?.toString() ?? '';
-        final qty = (entry['quantity'] as num?)?.toInt() ??
+        final qty =
+            (entry['quantity'] as num?)?.toInt() ??
             int.tryParse(entry['quantity']?.toString() ?? '') ??
             0;
         final product = byId[id];
@@ -187,8 +188,7 @@ class CartController extends ChangeNotifier {
         continue;
       }
       final qty = entry.value.quantity;
-      final clamped =
-          qty > product.stockQuantity ? product.stockQuantity : qty;
+      final clamped = qty > product.stockQuantity ? product.stockQuantity : qty;
       if (clamped <= 0) {
         stale.add(entry.key);
       } else {
@@ -208,10 +208,7 @@ class CartController extends ChangeNotifier {
 
     final payload = _items.values
         .map(
-          (item) => {
-            'productId': item.product.id,
-            'quantity': item.quantity,
-          },
+          (item) => {'productId': item.product.id, 'quantity': item.quantity},
         )
         .toList();
     prefs.setString(_storageKey(email), jsonEncode(payload));

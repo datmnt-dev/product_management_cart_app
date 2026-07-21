@@ -266,6 +266,7 @@ function buildOrder(template) {
       unitPrice: product.price,
       quantity: item.quantity,
       imageUrl: product.imageUrl,
+      category: product.category,
     };
   });
   const totalAmount = items.reduce(
@@ -284,6 +285,17 @@ function buildOrder(template) {
     updatedAt: statusHistory[statusHistory.length - 1].at,
     status,
     statusHistory,
+    stockRestored: status === "cancelled",
+    customerName: template.userEmail === "edge.customer@store.local"
+      ? "Edge Case Customer"
+      : "Customer Demo",
+    phone: template.userEmail === "edge.customer@store.local"
+      ? "0987654321"
+      : "0912345678",
+    shippingAddress: template.userEmail === "edge.customer@store.local"
+      ? "99 Edge Street, District 1, Ho Chi Minh City"
+      : "01 StoreFlow Demo Street, District 7, Ho Chi Minh City",
+    note: status === "cancelled" ? "Seed đơn hủy để kiểm tra doanh thu." : "",
   };
 }
 

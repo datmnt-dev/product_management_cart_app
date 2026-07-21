@@ -147,11 +147,7 @@ class OrderExpandableTile extends StatelessWidget {
           OrderTrackingTimeline(order: order),
           if (user != null) ...[
             const SizedBox(height: AppSpacing.md),
-            _OrderActions(
-              order: order,
-              user: user,
-              busy: orders.isUpdating,
-            ),
+            _OrderActions(order: order, user: user, busy: orders.isUpdating),
           ],
         ],
       ),

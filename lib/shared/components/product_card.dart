@@ -27,7 +27,10 @@ class ProductCard extends StatefulWidget {
   final bool canDelete;
   final bool canShop;
 
-  static bool isNew(Product product, {Duration window = const Duration(days: 7)}) {
+  static bool isNew(
+    Product product, {
+    Duration window = const Duration(days: 7),
+  }) {
     return DateTime.now().difference(product.createdAt) <= window;
   }
 
@@ -233,8 +236,9 @@ class _AddToCartButton extends StatelessWidget {
             borderRadius: AppRadii.borderMd,
             onTap: enabled
                 ? () {
-                    final added =
-                        context.read<CartController>().addProduct(product);
+                    final added = context.read<CartController>().addProduct(
+                      product,
+                    );
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text(

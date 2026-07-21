@@ -26,29 +26,27 @@ void main() {
       expect(dests.length, 3);
     });
 
-    test('manager has store + order board + statistics (3 tabs)', () {
+    test('manager has inventory + statistics (2 tabs)', () {
       final dests = destinationsFor(_user(AppRole.manager));
       expect(dests.map((d) => d.branchIndex).toList(), [
         ShellBranches.products,
-        ShellBranches.orders,
         ShellBranches.statistics,
       ]);
-      expect(dests.length, 3);
-      expect(dests[1].label, 'Điều phối');
+      expect(dests.length, 2);
+      expect(dests.any((d) => d.branchIndex == ShellBranches.orders), isFalse);
     });
 
-    test('admin has store, order board, statistics, roles (4 tabs)', () {
+    test('admin has inventory, statistics, roles (3 tabs)', () {
       final dests = destinationsFor(_user(AppRole.admin));
       expect(dests.map((d) => d.branchIndex).toList(), [
         ShellBranches.products,
-        ShellBranches.orders,
         ShellBranches.statistics,
         ShellBranches.roles,
       ]);
-      expect(dests.length, 4);
-      // Admin = system owner: order board of ALL orders, not shopping cart.
+      expect(dests.length, 3);
+      // Admin = system owner: operates orders inside Statistics, not Orders tab.
       expect(dests.any((d) => d.branchIndex == ShellBranches.cart), isFalse);
-      expect(dests[1].label, 'Điều phối');
+      expect(dests.any((d) => d.branchIndex == ShellBranches.orders), isFalse);
       expect(_user(AppRole.admin).canManageOrders, isTrue);
       expect(_user(AppRole.admin).canShop, isFalse);
     });

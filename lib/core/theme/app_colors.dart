@@ -36,9 +36,7 @@ abstract final class AppColors {
 
   /// Resolves brand primary for the given brightness.
   static Color brandPrimary(Brightness brightness) {
-    return brightness == Brightness.dark
-        ? brandPrimaryDark
-        : brandPrimaryLight;
+    return brightness == Brightness.dark ? brandPrimaryDark : brandPrimaryLight;
   }
 
   static Color brandSecondary(Brightness brightness) {

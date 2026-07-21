@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../app/router.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/utils/validators.dart';
+import '../../shared/widgets/google_sign_in_button.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../state/auth_controller.dart';
 
@@ -57,6 +58,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (result.success) {
       context.go(AppRoutes.login);
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isSubmitting = true);
+    final result = await context.read<AuthController>().signInWithGoogle(
+      rememberMe: true,
+    );
+
+    if (!mounted) return;
+
+    setState(() => _isSubmitting = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(result.message),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    if (result.success) {
+      context.go(AppRoutes.products);
     }
   }
 
@@ -261,6 +283,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 Text('Đăng ký tài khoản'),
                               ],
                             ),
+                    ),
+                    const SizedBox(height: 12),
+                    GoogleSignInButton(
+                      onPressed: _isSubmitting ? null : _signInWithGoogle,
+                      label: 'Đăng ký bằng Google',
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(

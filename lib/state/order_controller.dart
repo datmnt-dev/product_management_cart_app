@@ -7,6 +7,7 @@ import '../data/models/cart_item.dart';
 import '../data/models/order_model.dart';
 import '../data/models/product_model.dart';
 import '../data/models/user_model.dart';
+import '../data/models/user_role.dart';
 import '../data/services/firestore_database.dart';
 import 'auth_controller.dart';
 
@@ -21,6 +22,7 @@ class OrderController extends ChangeNotifier {
   final FirestoreDatabase _database;
   final AuthController _authController;
   StreamSubscription<List<OrderModel>>? _subscription;
+  String? _activeUserKey;
 
   List<OrderModel> _orders = [];
   RevenueFilter _filter = RevenueFilter.all;
@@ -204,9 +206,7 @@ class OrderController extends ChangeNotifier {
       to: OrderStatus.cancelled,
       isStaff: isStaff,
     )) {
-      throw StateError(
-        'Không thể hủy đơn ở trạng thái ${order.status.label}.',
-      );
+      throw StateError('Không thể hủy đơn ở trạng thái ${order.status.label}.');
     }
     if (!isStaff &&
         order.userEmail.trim().toLowerCase() !=
@@ -268,7 +268,7 @@ class OrderController extends ChangeNotifier {
       case OrderStatus.shipping:
         return 'Shop bàn giao vận chuyển';
       case OrderStatus.delivered:
-        return isStaff ? 'Shop xác nhận đã giao' : 'Khách xác nhận đã nhận';
+        return 'Khách xác nhận đã nhận';
       case OrderStatus.cancelled:
         return 'Đơn đã hủy';
     }
@@ -285,11 +285,21 @@ class OrderController extends ChangeNotifier {
     _subscription?.cancel();
     final user = _authController.currentUser;
     if (user == null) {
+      _activeUserKey = null;
       _orders = [];
+      _filter = RevenueFilter.all;
+      _statusFilter = null;
       _status = LoadStatus.idle;
       _errorMessage = null;
       notifyListeners();
       return;
+    }
+
+    final userKey = '${user.email.trim().toLowerCase()}|${user.role.key}';
+    if (_activeUserKey != userKey) {
+      _activeUserKey = userKey;
+      _filter = RevenueFilter.all;
+      _statusFilter = null;
     }
 
     _status = LoadStatus.loading;

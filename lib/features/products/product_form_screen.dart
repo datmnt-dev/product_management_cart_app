@@ -380,8 +380,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                         prefixIcon: Icon(Icons.inventory_2_outlined),
                         suffixText: 'sản phẩm',
                       ),
-                      validator: (v) =>
-                          Validators.nonNegativeInt(v, 'tồn kho'),
+                      validator: (v) => Validators.nonNegativeInt(v, 'tồn kho'),
                     ),
                     const SizedBox(height: AppSpacing.xl),
 
@@ -428,9 +427,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                                 const Icon(Icons.cloud_upload_outlined),
                                 const SizedBox(width: 8),
                                 Text(
-                                  _isEditing
-                                      ? 'Lưu thay đổi'
-                                      : 'Đăng bán ngay',
+                                  _isEditing ? 'Lưu thay đổi' : 'Đăng bán ngay',
                                 ),
                               ],
                             ),
