@@ -6,7 +6,6 @@ import '../core/utils/load_status.dart';
 import '../data/models/cart_item.dart';
 import '../data/models/coupon_model.dart';
 import '../data/models/order_model.dart';
-import '../data/models/product_model.dart';
 import '../data/models/user_model.dart';
 import '../data/models/user_role.dart';
 import '../data/services/firestore_database.dart';
@@ -86,7 +85,8 @@ class OrderController extends ChangeNotifier {
     _watchOrdersForCurrentUser();
   }
 
-  /// Checkout: stock deduction + order create in **one** Firestore transaction.
+  /// Checkout is handled by a callable Cloud Function so live product price,
+  /// stock, coupon usage, order write and seller fulfillments commit together.
   Future<OrderModel> checkout({
     required AppUser user,
     required List<CartItem> items,
@@ -97,31 +97,15 @@ class OrderController extends ChangeNotifier {
     PaymentMethod paymentMethod = PaymentMethod.cashOnDelivery,
     String couponCode = '',
   }) async {
-    final now = DateTime.now();
-    final orderItems = items.map((item) {
-      return OrderLine(
-        productId: item.product.id,
-        name: item.product.name,
-        unitPrice: item.product.price,
-        quantity: item.quantity,
-        imageUrl: item.product.imageUrl,
-        category: item.product.category.key,
-      );
-    }).toList();
-
-    final email = user.email.trim().toLowerCase();
-    final order = OrderModel(
-      id: 'order-${now.microsecondsSinceEpoch}',
-      userEmail: email,
-      items: orderItems,
-      totalAmount: orderItems.fold<double>(
-        0,
-        (total, item) => total + item.totalPrice,
-      ),
-      couponCode: Coupon.normalizeCode(couponCode),
-      createdAt: now,
-      updatedAt: now,
-      status: OrderStatus.placed,
+    return _database.placeOrderViaFunction(
+      items: items
+          .map(
+            (item) => <String, Object?>{
+              'productId': item.product.id,
+              'quantity': item.quantity,
+            },
+          )
+          .toList(),
       customerName: customerName.trim().isEmpty
           ? user.fullName.trim()
           : customerName.trim(),
@@ -129,26 +113,7 @@ class OrderController extends ChangeNotifier {
       shippingAddress: shippingAddress.trim(),
       note: note.trim(),
       paymentMethod: paymentMethod,
-      paymentStatus: paymentMethod == PaymentMethod.mockWallet
-          ? PaymentStatus.paid
-          : PaymentStatus.unpaid,
-      statusHistory: [
-        OrderStatusEvent(
-          status: OrderStatus.placed,
-          at: now,
-          byEmail: email,
-          note: 'Khách đã gửi đơn hàng',
-        ),
-      ],
-    );
-
-    final quantities = {
-      for (final item in items) item.product.id: item.quantity,
-    };
-
-    return _database.placeOrderAtomic(
-      order: order,
-      quantitiesByProductId: quantities,
+      couponCode: Coupon.normalizeCode(couponCode),
     );
   }
 
