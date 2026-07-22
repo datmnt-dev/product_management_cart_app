@@ -1,0 +1,17 @@
+{
+  "name": "product-management-cart-functions",
+  "description": "Backend checkout orchestration for product management cart app.",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "scripts": {
+    "lint": "node --check index.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.5.0",
+    "firebase-functions": "^6.4.0"
+  },
+  "devDependencies": {}
+}

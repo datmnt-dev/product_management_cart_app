@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -15,13 +16,16 @@ class FirestoreDatabase {
   FirestoreDatabase({
     FirebaseAuth? auth,
     FirebaseFirestore? firestore,
+    FirebaseFunctions? functions,
     GoogleSignIn? googleSignIn,
   }) : _auth = auth ?? FirebaseAuth.instance,
        _firestore = firestore ?? FirebaseFirestore.instance,
+       _functions = functions ?? FirebaseFunctions.instance,
        _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
   final FirebaseAuth _auth;
   final FirebaseFirestore _firestore;
+  final FirebaseFunctions _functions;
   final GoogleSignIn _googleSignIn;
   var _googleInitialized = false;
 
@@ -510,6 +514,32 @@ class FirestoreDatabase {
     });
 
     return committedOrder;
+  }
+
+  Future<OrderModel> placeOrderViaFunction({
+    required List<Map<String, Object?>> items,
+    required String customerName,
+    required String phone,
+    required String shippingAddress,
+    required String note,
+    required PaymentMethod paymentMethod,
+    required String couponCode,
+  }) async {
+    final callable = _functions.httpsCallable('placeOrder');
+    final response = await callable.call<Map<String, dynamic>>({
+      'items': items,
+      'customerName': customerName,
+      'phone': phone,
+      'shippingAddress': shippingAddress,
+      'note': note,
+      'paymentMethod': paymentMethod.key,
+      'couponCode': Coupon.normalizeCode(couponCode),
+    });
+    final rawOrder = response.data['order'];
+    if (rawOrder is! Map) {
+      throw StateError('Backend không trả về đơn hàng hợp lệ.');
+    }
+    return OrderModel.fromMap(rawOrder);
   }
 
   /// Cancel order and restore stock in one transaction (idempotent via stockRestored).
