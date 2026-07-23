@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 
 import '../core/utils/load_status.dart';
 import '../data/models/cart_item.dart';
 import '../data/models/coupon_model.dart';
 import '../data/models/order_model.dart';
+import '../data/models/product_model.dart';
 import '../data/models/user_model.dart';
 import '../data/models/user_role.dart';
 import '../data/services/firestore_database.dart';
@@ -97,24 +99,123 @@ class OrderController extends ChangeNotifier {
     PaymentMethod paymentMethod = PaymentMethod.cashOnDelivery,
     String couponCode = '',
   }) async {
-    return _database.placeOrderViaFunction(
-      items: items
-          .map(
-            (item) => <String, Object?>{
-              'productId': item.product.id,
-              'quantity': item.quantity,
-            },
-          )
-          .toList(),
-      customerName: customerName.trim().isEmpty
-          ? user.fullName.trim()
-          : customerName.trim(),
+    final normalizedCoupon = Coupon.normalizeCode(couponCode);
+    final resolvedCustomerName = customerName.trim().isEmpty
+        ? user.fullName.trim()
+        : customerName.trim();
+
+    try {
+      return await _database.placeOrderViaFunction(
+        items: items
+            .map(
+              (item) => <String, Object?>{
+                'productId': item.product.id,
+                'quantity': item.quantity,
+              },
+            )
+            .toList(),
+        customerName: resolvedCustomerName,
+        phone: phone.trim(),
+        shippingAddress: shippingAddress.trim(),
+        note: note.trim(),
+        paymentMethod: paymentMethod,
+        couponCode: normalizedCoupon,
+      );
+    } on FirebaseFunctionsException catch (error) {
+      if (kDebugMode && _canUseDebugCheckoutFallback(error)) {
+        debugPrint(
+          'Cloud Function checkout unavailable (${error.code}); '
+          'using debug Firestore transaction fallback.',
+        );
+        return _checkoutWithClientTransaction(
+          user: user,
+          items: items,
+          customerName: resolvedCustomerName,
+          phone: phone,
+          shippingAddress: shippingAddress,
+          note: note,
+          paymentMethod: paymentMethod,
+          couponCode: normalizedCoupon,
+        );
+      }
+      throw StateError(_checkoutFunctionErrorMessage(error));
+    }
+  }
+
+  Future<OrderModel> _checkoutWithClientTransaction({
+    required AppUser user,
+    required List<CartItem> items,
+    required String customerName,
+    required String phone,
+    required String shippingAddress,
+    required String note,
+    required PaymentMethod paymentMethod,
+    required String couponCode,
+  }) {
+    final now = DateTime.now();
+    final email = user.email.trim().toLowerCase();
+    final orderItems = items.map((item) {
+      return OrderLine(
+        productId: item.product.id,
+        name: item.product.name,
+        unitPrice: item.product.price,
+        quantity: item.quantity,
+        imageUrl: item.product.imageUrl,
+        category: item.product.category.key,
+      );
+    }).toList();
+    final order = OrderModel(
+      id: 'order-${now.microsecondsSinceEpoch}',
+      userEmail: email,
+      items: orderItems,
+      totalAmount: orderItems.fold<double>(
+        0,
+        (total, item) => total + item.totalPrice,
+      ),
+      couponCode: couponCode,
+      createdAt: now,
+      updatedAt: now,
+      status: OrderStatus.placed,
+      customerName: customerName,
       phone: phone.trim(),
       shippingAddress: shippingAddress.trim(),
       note: note.trim(),
       paymentMethod: paymentMethod,
-      couponCode: Coupon.normalizeCode(couponCode),
+      paymentStatus: paymentMethod == PaymentMethod.mockWallet
+          ? PaymentStatus.paid
+          : PaymentStatus.unpaid,
+      statusHistory: [
+        OrderStatusEvent(
+          status: OrderStatus.placed,
+          at: now,
+          byEmail: email,
+          note: 'Khách đã gửi đơn hàng',
+        ),
+      ],
     );
+    return _database.placeOrderAtomic(
+      order: order,
+      quantitiesByProductId: {
+        for (final item in items) item.product.id: item.quantity,
+      },
+    );
+  }
+
+  bool _canUseDebugCheckoutFallback(FirebaseFunctionsException error) {
+    return error.code == 'internal' ||
+        error.code == 'not-found' ||
+        error.code == 'unavailable' ||
+        error.code == 'unimplemented';
+  }
+
+  String _checkoutFunctionErrorMessage(FirebaseFunctionsException error) {
+    if (_canUseDebugCheckoutFallback(error)) {
+      return 'Cloud Function đặt hàng chưa sẵn sàng. '
+          'Hãy deploy functions rồi thử lại.';
+    }
+    final message = error.message?.trim();
+    if (message != null && message.isNotEmpty) return message;
+    return 'Không thể đặt hàng qua backend (${error.code}).';
   }
 
   Future<AppliedCoupon> previewCoupon({
